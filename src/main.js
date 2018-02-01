@@ -13,7 +13,6 @@ var state = {
 
 var clock;
 var camera, controls, scene, renderer;
-var geometry, material, mesh;
 
 window.addEventListener('resize', resize, false);
 
@@ -27,7 +26,7 @@ function init() {
 	clock = new THREE.Clock();
 
 	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
-	camera.position.set(0, -2, 1);
+	camera.position.set(0, 2, 0);
 
 	controls = new THREE.FirstPersonControls(camera);
 	controls.movementSpeed = 2.2;
@@ -35,20 +34,40 @@ function init() {
 
 	scene = new THREE.Scene();
 
-	// White directional light at half intensity shining from the top.
-	var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-	directionalLight.castShadows = true;
-	scene.add( directionalLight );
+	var ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+	scene.add(ambientLight);
+
+	light = new THREE.DirectionalLight(0xffffff, 0.5);
+	light.position.x = 20;
+	light.position.y = 60;
+	light.position.z = 5;
+	light.target = new THREE.Object3D();
+	light.castShadow = true;
+	light.shadow.mapSize.width = 2048;
+	light.shadow.mapSize.height = 2048;
+	light.shadow.camera.zoom = 0.25;
+	scene.add(light);
+	scene.add(light.target);
+
+	scene.add(new THREE.DirectionalLightHelper(light));
+	scene.add(new THREE.CameraHelper(light.shadow.camera));
 
 	// Load in some scene
 	var loader = new THREE.ObjectLoader();
 	loader.load('assets/sponza/sponza.json', function(object) {
 
-		// Add loaded object to the scene
+		object.castShadow = true;
+		object.receiveShadow = true;
+
+		object.traverse(function(child) {
+				child.castShadow = true;
+				child.receiveShadow = true;
+		});
+
 		scene.add(object);
 
-		// Set camera to the camera from the scene
 /*
+		// Set camera to the camera from the scene
 		object.traverse(function(child) {
 			if (child instanceof THREE.PerspectiveCamera) {
 				camera = child;
@@ -57,13 +76,10 @@ function init() {
 */
 	});
 
-	geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-	material = new THREE.MeshNormalMaterial();
-	mesh = new THREE.Mesh(geometry, material);
-	scene.add(mesh);
-
 	renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	document.body.appendChild(renderer.domElement);
 
 	// Add controls to the GUI panel
@@ -92,9 +108,6 @@ function render() {
 
 	var delta = clock.getDelta();
 	controls.update(delta);
-
-	mesh.rotation.x += 0.01;
-	mesh.rotation.y += 0.02;
 
 	renderer.render(scene, camera);
 
