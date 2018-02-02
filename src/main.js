@@ -1,17 +1,18 @@
 
 // Add stats
 var stats = new Stats();
+
 document.body.appendChild(stats.dom);
 stats.showPanel(1); // (frame time)
 
 // Add GUI panel
 var gui = new dat.GUI();
 
-var state = {
-	clearColor: 0x000
+var settings = {
+	target_fps: 60,
 };
 
-var clock;
+var clock, render_clock;
 var camera, controls, scene, renderer;
 
 window.addEventListener('resize', resize, false);
@@ -21,16 +22,15 @@ render();
 
 ////////////////////////////////////////////////////////////////////////////////
 
+
 function init() {
 
 	clock = new THREE.Clock();
+	render_clock = new THREE.Clock();
 
 	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
 	camera.position.set(0, 2, 0);
 
-	controls = new THREE.FirstPersonControls(camera);
-	controls.movementSpeed = 2.2;
-	controls.lookSpeed = 0.25;
 
 	scene = new THREE.Scene();
 
@@ -82,11 +82,11 @@ function init() {
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	document.body.appendChild(renderer.domElement);
 
-	// Add controls to the GUI panel
-	gui.addColor(state, 'clearColor').onChange(function(color) {
-		renderer.setClearColor(new THREE.Color(color));
-	});
+	controls = new THREE.FirstPersonControls(camera,renderer.domElement);
+	controls.movementSpeed = 2.2;
+	controls.lookSpeed = 0.25;
 
+	gui.add(settings, 'target_fps', 0, 120);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,15 +104,19 @@ function resize() {
 ////////////////////////////////////////////////////////////////////////////////
 
 function render() {
+	var start_stamp= new Date().getTime();
 	stats.begin();
-
 	var delta = clock.getDelta();
 	controls.update(delta);
-
 	renderer.render(scene, camera);
-
 	stats.end();
-	requestAnimationFrame(render);
+
+	var render_delta = new Date().getTime()-start_stamp;
+	setTimeout( function() {
+		requestAnimationFrame( render);
+	}, 1000 / settings.target_fps - render_delta-1000/120);	
+	
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
