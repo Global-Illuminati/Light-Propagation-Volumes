@@ -12,7 +12,7 @@ var settings = {
 	target_fps: 60,
 };
 
-var clock, render_clock;
+var clock;
 var camera, controls, scene, renderer;
 
 window.addEventListener('resize', resize, false);
@@ -26,7 +26,6 @@ render();
 function init() {
 
 	clock = new THREE.Clock();
-	render_clock = new THREE.Clock();
 
 	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
 	camera.position.set(0, 2, 0);
