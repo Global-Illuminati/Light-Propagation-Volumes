@@ -39,41 +39,42 @@ function init() {
 	light = new THREE.DirectionalLight(0xffffff, 0.5);
 	light.position.x = 20;
 	light.position.y = 60;
-	light.position.z = 5;
+	light.position.z = 10;
 	light.target = new THREE.Object3D();
 	light.castShadow = true;
 	light.shadow.mapSize.width = 2048;
 	light.shadow.mapSize.height = 2048;
-	light.shadow.camera.zoom = 0.25;
+	light.shadow.camera.zoom = 0.15;
 	scene.add(light);
 	scene.add(light.target);
 
 	scene.add(new THREE.DirectionalLightHelper(light));
 	scene.add(new THREE.CameraHelper(light.shadow.camera));
 
-	// Load in some scene
-	var loader = new THREE.ObjectLoader();
-	loader.load('assets/sponza/sponza.json', function(object) {
+	THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader() );
+	
+	var mtlLoader = new THREE.MTLLoader();
+	mtlLoader.setPath('assets/sponza/' );
+	mtlLoader.load('sponza.mtl', function( materials ) {
+		materials.preload();
 
-		object.castShadow = true;
-		object.receiveShadow = true;
+		var objLoader = new THREE.OBJLoader();
+		objLoader.setMaterials( materials );
+		objLoader.load( 'assets/sponza/sponza.obj', function ( object ) {
+			object.castShadow = true;
+			object.receiveShadow = true;
+			object.traverse(function(child) {
+					child.castShadow = true;
+					child.receiveShadow = true;
+			});
+			scene.add( object );
 
-		object.traverse(function(child) {
-				child.castShadow = true;
-				child.receiveShadow = true;
 		});
 
-		scene.add(object);
+		console.log(materials);
 
-/*
-		// Set camera to the camera from the scene
-		object.traverse(function(child) {
-			if (child instanceof THREE.PerspectiveCamera) {
-				camera = child;
-			}
-		});
-*/
 	});
+
 
 	renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setSize(window.innerWidth, window.innerHeight);
