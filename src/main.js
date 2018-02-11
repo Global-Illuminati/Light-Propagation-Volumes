@@ -60,19 +60,19 @@ function init() {
 
 		var objLoader = new THREE.OBJLoader();
 		objLoader.setMaterials( materials );
-		objLoader.load( 'assets/sponza/sponza.obj', function ( object ) {
+		
+
+		
+		objLoader.load( 'assets/sponza/sponza.obj_2xuv', function ( object ) {
 			object.castShadow = true;
 			object.receiveShadow = true;
 			object.traverse(function(child) {
 					child.castShadow = true;
 					child.receiveShadow = true;
 			});
-			scene.add( object );
-
+			console.log(object);
+		 scene.add( object );
 		});
-
-		console.log(materials);
-
 	});
 
 

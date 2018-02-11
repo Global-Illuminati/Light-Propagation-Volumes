@@ -16,6 +16,8 @@ THREE.OBJLoader = function(manager) {
         normal_pattern: /^vn\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)/,
         // vt float float
         uv_pattern: /^vt\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)/,
+        // vt float float
+        uv2_pattern: /^vt2\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)/,
         // f vertex vertex vertex
         face_vertex: /^f\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)(?:\s+(-?\d+))?/,
         // f vertex/uv vertex/uv vertex/uv
@@ -24,6 +26,9 @@ THREE.OBJLoader = function(manager) {
         face_vertex_uv_normal: /^f\s+(-?\d+)\/(-?\d+)\/(-?\d+)\s+(-?\d+)\/(-?\d+)\/(-?\d+)\s+(-?\d+)\/(-?\d+)\/(-?\d+)(?:\s+(-?\d+)\/(-?\d+)\/(-?\d+))?/,
         // f vertex//normal vertex//normal vertex//normal
         face_vertex_normal: /^f\s+(-?\d+)\/\/(-?\d+)\s+(-?\d+)\/\/(-?\d+)\s+(-?\d+)\/\/(-?\d+)(?:\s+(-?\d+)\/\/(-?\d+))?/,
+        // Who the fuck uses regexs to parse stuff -.-  like fucking look at this...
+        // f vertex/uv//uv2 vertex/uv//uv2 vertex/uv//uv2  
+        face_vertex_uv_uv2: /^f\s+(-?\d+)\/(-?\d+)\/\/(-?\d+)\s+(-?\d+)\/(-?\d+)\/\/(-?\d+)\s+(-?\d+)\/(-?\d+)\/\/(-?\d+)(?:\s+(-?\d+)\/(-?\d+)\/\/(-?\d+))?/,
         // o object_name | g group_name
         object_pattern: /^[og]\s*(.+)?/,
         // s boolean
@@ -75,6 +80,7 @@ THREE.OBJLoader.prototype = {
             vertices: [],
             normals: [],
             uvs: [],
+            uv2s: [],
 
             materialLibraries: [],
 
@@ -105,7 +111,8 @@ THREE.OBJLoader.prototype = {
                     geometry: {
                         vertices: [],
                         normals: [],
-                        uvs: []
+                        uvs: [],
+                        uv2s: []
                     },
                     materials: [],
                     smooth: true,
@@ -235,6 +242,11 @@ THREE.OBJLoader.prototype = {
 
             },
 
+            parseUV2Index: function(value, len) {
+                var index = parseInt(value, 10);
+                return (index >= 0 ? index - 1 : index + len / 2) * 2;
+            },
+
             addVertex: function(a, b, c) {
 
                 var src = this.vertices;
@@ -291,6 +303,18 @@ THREE.OBJLoader.prototype = {
                 dst.push(src[c + 0]);
                 dst.push(-src[c + 1]);
 
+            },
+
+            addUV2: function(a, b, c) {
+                var src = this.uv2s;
+                var dst = this.object.geometry.uv2s;
+
+                dst.push(src[a + 0]);
+                dst.push(src[a + 1]);
+                dst.push(src[b + 0]);
+                dst.push(src[b + 1]);
+                dst.push(src[c + 0]);
+                dst.push(src[c + 1]);
             },
 
             addUVLine: function(a) {
@@ -371,7 +395,24 @@ THREE.OBJLoader.prototype = {
                     }
 
                 }
+            },
 
+            addFace2(a, b, c, d, ua, ub, uc, ud, u2a,u2b,u2c,u2d)
+            {
+                this.addFace(a,b,c,d,ua,ub,uc,ud);
+                var uv2Len = this.uv2s.length;
+
+                ia = this.parseUV2Index(u2a, uv2Len);
+                ib = this.parseUV2Index(u2b, uv2Len);
+                ic = this.parseUV2Index(u2c, uv2Len);
+
+                if (u2d === undefined) {
+                    this.addUV2(ia, ib, ic);
+                } else {
+                    id = this.parseUV2Index(ud, uv2Len);
+                    this.addUV2(ia, ib, id);
+                    this.addUV2(ib, ic, id);
+                }
             },
 
             addLineGeometry: function(vertices, uvs) {
@@ -474,7 +515,17 @@ THREE.OBJLoader.prototype = {
                     parseFloat(result[1]),
                     parseFloat(result[2]));
 
-                } else {
+                } 
+                else if (lineSecondChar === 't' && (result = this.regexp.uv2_pattern.exec(line)) !== null) {
+
+                    // 0               1      2
+                    // ["vt2 0.1 0.2", "0.1", "0.2"]
+
+                    state.uv2s.push(
+                    parseFloat(result[1]),
+                    parseFloat(result[2]));
+                } 
+                else {
 
                     throw new Error("Unexpected vertex/normal/uv line: '" + line + "'");
 
@@ -503,7 +554,21 @@ THREE.OBJLoader.prototype = {
                     result[1], result[3], result[5], result[7],
                     result[2], result[4], result[6], result[8]);
 
-                } else if ((result = this.regexp.face_vertex_normal.exec(line)) !== null) {
+                } else if ((result = this.regexp.face_vertex_uv_uv2.exec(line)) !== null) {
+
+                    // f vertex/uv//uv2 vertex/uv//uv2 vertex/uv//uv2
+
+                    state.addFace2(
+                    result[1], result[4], result[7], result[10],
+                    result[2], result[5], result[8], result[11],
+                    result[3], result[6], result[9], result[12]);
+                    /*
+                    state.addFace(
+                        result[1], result[4], result[7], result[10],
+                        result[2], result[5], result[8], result[11]);
+                    */
+                } 
+                else if ((result = this.regexp.face_vertex_normal.exec(line)) !== null) {
 
                     // f vertex//normal vertex//normal vertex//normal
                     // 0                     1    2    3    4    5    6   7          8
@@ -639,6 +704,10 @@ THREE.OBJLoader.prototype = {
 
                 buffergeometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(geometry.uvs), 2));
 
+            }
+            if(geometry.uv2s.length > 0)
+            {
+                buffergeometry.addAttribute('uv2', new THREE.BufferAttribute(new Float32Array(geometry.uv2s), 2));
             }
 
             // Create materials
