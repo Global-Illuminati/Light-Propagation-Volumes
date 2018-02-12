@@ -158,6 +158,7 @@
     <ClInclude Include="thekla_atlas.h" />
     <ClInclude Include="thekla_mesh_load.h" />
     <ClInclude Include="tinyobj_loader_c.h" />
+    <ClInclude Include="voxelizer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="precompute.cpp" />
