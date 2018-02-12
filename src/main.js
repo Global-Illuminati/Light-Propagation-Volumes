@@ -70,7 +70,6 @@ function init() {
 					child.castShadow = true;
 					child.receiveShadow = true;
 			});
-			console.log(object);
 		 scene.add( object );
 		});
 	});

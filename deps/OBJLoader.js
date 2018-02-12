@@ -309,12 +309,12 @@ THREE.OBJLoader.prototype = {
                 var src = this.uv2s;
                 var dst = this.object.geometry.uv2s;
 
-                dst.push(src[a + 0]);
-                dst.push(src[a + 1]);
-                dst.push(src[b + 0]);
-                dst.push(src[b + 1]);
-                dst.push(src[c + 0]);
-                dst.push(src[c + 1]);
+                dst.push(src[a + 0]/1024.0);
+                dst.push(src[a + 1]/1024.0);
+                dst.push(src[b + 0]/1024.0);
+                dst.push(src[b + 1]/1024.0);
+                dst.push(src[c + 0]/1024.0);
+                dst.push(src[c + 1]/1024.0);
             },
 
             addUVLine: function(a) {
@@ -703,7 +703,6 @@ THREE.OBJLoader.prototype = {
             if (geometry.uvs.length > 0) {
 
                 buffergeometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(geometry.uvs), 2));
-
             }
             if(geometry.uv2s.length > 0)
             {
