@@ -24,7 +24,8 @@ const char *get_file_data(size_t *data_len, const char *file_path) {
 	fseek(file, 0, SEEK_END);
 	size_t file_size = ftell(file);
 	rewind(file);
-	char *data = (char *)malloc(file_size);
+	char *data = (char *)malloc(file_size+1);
+	data[file_size] = '\0';
 	if (data) {
 		fread(data, 1, file_size, file);
 		*data_len = file_size;
@@ -157,6 +158,8 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 
 
 int main(int argc, char * argv[]) {
+
+
 	tinyobj_attrib_t attr;
 	tinyobj_shape_t* shapes = NULL;
 	size_t num_shapes;
@@ -164,6 +167,7 @@ int main(int argc, char * argv[]) {
 	size_t num_materials;
 
 	const char *obj_file_path = "../../assets/sponza/sponza.obj";
+	//const char *obj_file_path = "A:/sphere_ico.obj";
 
 	{
 		size_t data_len = 0;
@@ -175,7 +179,7 @@ int main(int argc, char * argv[]) {
 
 		unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
 		int ret = tinyobj_parse_obj(&attr, &shapes, &num_shapes, &materials,
-			&num_materials, data, data_len, flags);
+			&num_materials, data, data_len+1, flags);
 		if (ret != TINYOBJ_SUCCESS) {
 			return 0;
 		}
@@ -236,7 +240,7 @@ int main(int argc, char * argv[]) {
 	input_mesh.face_array = faces;
 
 	Atlas_Output_Mesh *output_mesh =NULL;
-#if 1
+#if 0
 	{
 		// Generate Atlas_Output_Mesh.
 		Atlas_Options atlas_options;
@@ -283,8 +287,9 @@ int main(int argc, char * argv[]) {
 		}
 		m.indices = indices;
 		voxelize_scene(m, &data);
-		flood_fill_voxel_scene(&data);
-		//write_voxel_data(&data, "../voxels.dat");
+		std::vector<ivec3>probes;
+		flood_fill_voxel_scene(&data, probes);
+		write_voxel_data(&data, "../voxels.dat");
 	}
 
 
