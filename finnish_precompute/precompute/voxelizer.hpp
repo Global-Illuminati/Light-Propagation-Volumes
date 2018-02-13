@@ -27,6 +27,10 @@ vec3 operator *(ivec3 a, vec3 b) {
 	return{ a.x * b.x,a.y * b.y ,a.z * b.z };
 }
 
+ivec3 operator +(ivec3 a, ivec3 b) {
+	return{ a.x + b.x,a.y + b.y ,a.z + b.z };
+}
+
 struct AABB {
 	vec3 min, max;
 };
@@ -53,8 +57,8 @@ ivec3 min(ivec3 a, ivec3 b) {
 	return{ min(a.x,b.x),min(a.y,b.y) ,min(a.z,b.z) };
 }
 #define VOXEL_RES 512
-struct voxel_data {
-	bool voxels[VOXEL_RES][VOXEL_RES][VOXEL_RES];
+struct VoxelScene {
+	uint8_t voxels[VOXEL_RES][VOXEL_RES][VOXEL_RES];
 	int voxel_res;
 	AABB scene_bounds;
 };
@@ -114,7 +118,7 @@ AABB aabb_from_triangle(Triangle t) {
 	return ret;
 }
 
-iAABB transform_to_voxelspace(AABB bounding_box, voxel_data *data) {
+iAABB transform_to_voxelspace(AABB bounding_box, VoxelScene *data) {
 	vec3 voxel_scene_size = data->scene_bounds.max - data->scene_bounds.min;
 	iAABB ret;
 	ret.min = floor((bounding_box.min - data->scene_bounds.min) / voxel_scene_size  * data->voxel_res);
@@ -127,7 +131,7 @@ iAABB transform_to_voxelspace(AABB bounding_box, voxel_data *data) {
 	return ret;
 }
 
-AABB get_voxel_bounds(ivec3 voxel, voxel_data *data) {
+AABB get_voxel_bounds(ivec3 voxel, VoxelScene *data) {
 	vec3 voxel_scene_size = data->scene_bounds.max - data->scene_bounds.min;
 	vec3 voxel_size = voxel_scene_size / data->voxel_res;
 
@@ -228,7 +232,7 @@ bool is_colliding(Triangle t, AABB a) {
 }
 
 
-void voxelize_scene(Mesh mesh, voxel_data *data) {
+void voxelize_scene(Mesh mesh, VoxelScene *data) {
 	data->scene_bounds = get_scene_bounds(mesh);
 	data->voxel_res = VOXEL_RES;
 	int num_set_voxels = 0;
@@ -249,7 +253,7 @@ void voxelize_scene(Mesh mesh, voxel_data *data) {
 			ivec3 voxel = { x,y,z };
 			AABB voxel_bounds = get_voxel_bounds(voxel, data);
 			if (is_colliding(t, voxel_bounds)) {
-				data->voxels[x][y][z] = true;
+				data->voxels[x][y][z] = 1;
 				++num_set_voxels;
 			}
 		}
@@ -257,10 +261,57 @@ void voxelize_scene(Mesh mesh, voxel_data *data) {
 	printf("%d\n", num_set_voxels);
 }
 
-void write_voxel_data(voxel_data *data, char *file_path) {
+#include <vector>
+
+void maybe_enque_unchecked(VoxelScene *scene, std::vector<ivec3> &stack, ivec3 value) {
+	if (scene->voxels[value.x][value.y][value.z])   return;
+	scene->voxels[value.x][value.y][value.z] = 2;
+	stack.push_back(value);
+}
+void maybe_enque(VoxelScene *scene, std::vector<ivec3> &stack, ivec3 value) {
+	if (value.x < 0 || value.x >= scene->voxel_res) return;
+	if (value.y < 0 || value.y >= scene->voxel_res) return;
+	if (value.z < 0 || value.z >= scene->voxel_res) return;
+	if (scene->voxels[value.x][value.y][value.z])   return;
+	scene->voxels[value.x][value.y][value.z] = 2;
+	stack.push_back(value);
+}
+
+void flood_fill_voxel_scene(VoxelScene *scene) {
+
+	std::vector<ivec3> to_process;
+	to_process.reserve(scene->voxel_res*scene->voxel_res * 6);
+	int process_index = 0;
+
+	// push all faces of voxel scene as start verts
+	for (int x = 0; x < scene->voxel_res; x++) {
+		for (int y = 0; y < scene->voxel_res; y++) {
+			maybe_enque_unchecked(scene, to_process, { x,y, 0 });
+			maybe_enque_unchecked(scene, to_process, { x,y, scene->voxel_res - 1 });
+			maybe_enque_unchecked(scene, to_process, { 0, x,y });
+			maybe_enque_unchecked(scene, to_process, { scene->voxel_res - 1,x,y });
+			maybe_enque_unchecked(scene, to_process, { x,0, y });
+			maybe_enque_unchecked(scene, to_process, { x,scene->voxel_res - 1,y });
+		}
+	}
+	printf("flow fill setup done...\n");
+	
+	ivec3 neighbours[6] = { { 1,0,0 },{ -1,0,0 },{ 0,1,0 },{ 0,-1,0 },{ 0,0,1 },{ 0,0,-1 } };
+	while (to_process.size() > 0) {
+		ivec3 current = to_process.back();
+		to_process.pop_back();
+		for (int i = 0; i < 6; i++) {
+			maybe_enque(scene, to_process, current + neighbours[i]);
+		}
+	}
+	printf("done...\n");
+}
+
+
+void write_voxel_data(VoxelScene *data, char *file_path) {
 	FILE *f = fopen(file_path, "w");
-	for (int x = 0; x <data->voxel_res; x++) for (int y = 0; y < data->voxel_res; y++) for (int z = 0; z < data->voxel_res; z++) {
-		if (data->voxels[x][y][z]) fprintf(f, "%d %d %d\n", x, y, z);
+	for (int z = 0; z < data->voxel_res; z++) for (int y = 0; y < data->voxel_res; y++) for (int z = 0; z < data->voxel_res; z++) {
+		if (data->voxels[z][y][z]) fprintf(f, "%d %d %d\n", z, y, z);
 	}
 	fclose(f);
 }

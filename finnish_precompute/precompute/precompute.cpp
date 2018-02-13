@@ -12,7 +12,7 @@ using namespace Thekla;
 #include <assert.h>
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include "tinyobj_loader_c.h"
-
+#include "stdint.h"
 #include "math.h";
 
 
@@ -235,38 +235,39 @@ int main(int argc, char * argv[]) {
 	input_mesh.face_count = attr.num_face_num_verts;
 	input_mesh.face_array = faces;
 
-
-	// Generate Atlas_Output_Mesh.
-	Atlas_Options atlas_options;
-	atlas_set_default_options(&atlas_options);
-
-
-	// Avoid brute force packing, since it can be unusably slow in some situations.
-	atlas_options.packer_options.witness.packing_quality = 1;
-	atlas_options.packer_options.witness.conservative = false;
-	atlas_options.packer_options.witness.texel_area = 3; // approx the size we want 
-
-	atlas_options.charter_options.witness.max_chart_area = 100000;
+	Atlas_Output_Mesh *output_mesh =NULL;
+#if 1
+	{
+		// Generate Atlas_Output_Mesh.
+		Atlas_Options atlas_options;
+		atlas_set_default_options(&atlas_options);
 
 
-	Atlas_Error error = Atlas_Error_Success;
-	Atlas_Output_Mesh * output_mesh = atlas_generate(&input_mesh, &atlas_options, &error);
+		// Avoid brute force packing, since it can be unusably slow in some situations.
+		atlas_options.packer_options.witness.packing_quality = 1;
+		atlas_options.packer_options.witness.conservative = false;
+		atlas_options.packer_options.witness.texel_area = 3; // approx the size we want 
+
+		atlas_options.charter_options.witness.max_chart_area = 100000;
+
+	
+		Atlas_Error error = Atlas_Error_Success;
+		output_mesh = atlas_generate(&input_mesh, &atlas_options, &error);
 
 
 
-	printf("Atlas mesh has %d verts\n", output_mesh->vertex_count);
-	printf("Atlas mesh has %d triangles\n", output_mesh->index_count / 3);
-	printf("Produced debug_packer_final.tga\n");
+		printf("Atlas mesh has %d verts\n", output_mesh->vertex_count);
+		printf("Atlas mesh has %d triangles\n", output_mesh->index_count / 3);
+		printf("Produced debug_packer_final.tga\n");
 
-	printf("in:%d\n", attr.num_faces);
-	printf("out:%d\n", output_mesh->index_count);
+		printf("in:%d\n", attr.num_faces);
+		printf("out:%d\n", output_mesh->index_count);
 
-	write_obj(attr, shapes, num_shapes, output_mesh, "../../assets/sponza/sponza.obj_2xuv");
-
-
-	static voxel_data data;
-
-
+		write_obj(attr, shapes, num_shapes, output_mesh, "../../assets/sponza/sponza.obj_2xuv");
+	}
+#endif
+	
+	static VoxelScene data;
 	{//voxelize
 		Mesh m;
 		m.num_verts = input_mesh.vertex_count;
@@ -282,8 +283,8 @@ int main(int argc, char * argv[]) {
 		}
 		m.indices = indices;
 		voxelize_scene(m, &data);
+		flood_fill_voxel_scene(&data);
 		//write_voxel_data(&data, "../voxels.dat");
-
 	}
 
 

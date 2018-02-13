@@ -8,3 +8,4 @@
 *.sou
 **/ipch/*
 *.opendb
+*.TMP
