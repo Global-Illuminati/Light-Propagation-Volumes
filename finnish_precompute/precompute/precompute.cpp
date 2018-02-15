@@ -232,8 +232,8 @@ int main(int argc, char * argv[]) {
 	tinyobj_material_t* materials = NULL;
 	size_t num_materials;
 
-	//const char *obj_file_path = "../../assets/sponza/sponza.obj";
-	const char *obj_file_path = "A:/sphere_ico.obj";
+	const char *obj_file_path = "../../assets/sponza/sponza.obj";
+	//const char *obj_file_path = "A:/sphere_ico.obj";
 
 	{
 		size_t data_len = 0;
@@ -255,7 +255,7 @@ int main(int argc, char * argv[]) {
 	}
 
 
-	// convert to format theklas input format
+	// convert to theklas input format
 	Atlas_Input_Face   *faces = (Atlas_Input_Face  *)malloc(sizeof(Atlas_Input_Face)*attr.num_face_num_verts);
 	Atlas_Input_Vertex *verts = (Atlas_Input_Vertex*)malloc(sizeof(Atlas_Input_Vertex)*attr.num_vertices);
 

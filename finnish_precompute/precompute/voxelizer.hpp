@@ -28,7 +28,7 @@ ivec2 ceil2(vec2 v) {
 	return ivec2((int)ceil(v.x()), (int)ceil(v.y()));
 }
 
-#define VOXEL_RES 64
+#define VOXEL_RES 128
 struct VoxelScene {
 	uint8_t voxels[VOXEL_RES][VOXEL_RES][VOXEL_RES];
 	int voxel_res;
@@ -204,7 +204,7 @@ void flood_fill_voxel_scene(VoxelScene *scene, std::vector<ivec3> &candidate_pro
 void write_voxel_data(VoxelScene *data, char *file_path) {
 	FILE *f = fopen(file_path, "w");
 	for (int x = 0; x < data->voxel_res; x++) for (int y = 0; y < data->voxel_res; y++) for (int z = 0; z < data->voxel_res; z++) {
-		if (data->voxels[x][y][z] == 1) fprintf(f, "%d %d %d\n", x, y, z);
+		if (data->voxels[x][y][z] != 2) fprintf(f, "%d %d %d\n", x, y, z);
 	}
 	fclose(f);
 }
