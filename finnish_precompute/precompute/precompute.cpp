@@ -4,7 +4,6 @@
 #include "string.h"
 
 
-
 #include "thekla_atlas.h"
 using namespace Thekla;
 
@@ -15,6 +14,11 @@ using namespace Thekla;
 #include "stdint.h"
 #include "math.h";
 
+#include "Eigen\Dense"
+typedef Eigen::Vector2f vec2;
+typedef Eigen::Vector3f vec3;
+typedef Eigen::Vector2i ivec2;
+typedef Eigen::Vector3i ivec3;
 
 
 const char *get_file_data(size_t *data_len, const char *file_path) {
@@ -141,8 +145,67 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 	}
 	fclose(f);
 }
-
 #include "voxelizer.hpp"
+#if 0
+iAABB2 transform_to_pixel_space(AABB2 bounding_box, Atlas_Output_Mesh *mesh) {
+	iAABB2 ret;
+	ivec2 atlas_size = ivec2(mesh->atlas_width, mesh->atlas_height);
+	ret.min = floor2(bounding_box.min).cwiseMax(0);
+	ret.max = ceil2(bounding_box.max).cwiseMin(atlas_size);
+	return ret;
+}
+
+vec2 get_pixel_center(ivec2 pixel) {
+	return vec2(pixel.x()+0.5, pixel.y()+0.5);
+}
+
+vec3 compute_barycentric_coords(vec2 p, Triangle2 &tri) {
+	vec2 v0 = tri.b - tri.a;
+	vec2 v1 = tri.c - tri.a;
+	vec2 v2 = p - tri.a;
+	float inv_denom = 1.0/(v0.x() * v1.y() - v1.x() * v0.y());
+	float v = (v2.x() * v1.y() - v1.x() * v2.y()) * inv_denom;
+	float w = (v0.x() * v2.y() - v2.x() * v0.y()) * inv_denom;
+	float u = 1.0f - v - w;
+	return vec3(u, v, w);
+}
+
+
+// appearently this crashes... why?
+void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, std::vector<vec3> &receivers) {
+
+	static uint8_t pixel_is_processed[2048][2048];
+	for (int face_idx = 0; face_idx < mesh->index_count / 3; face_idx++) {
+		auto new_a_idx = mesh->index_array[face_idx * 3 + 0];
+		auto new_b_idx = mesh->index_array[face_idx * 3 + 1];
+		auto new_c_idx = mesh->index_array[face_idx * 3 + 2];
+		vec3 vert_a = Eigen::Map<vec3>(&attr.vertices[mesh->vertex_array[new_a_idx].xref * 3]);
+		vec3 vert_b = Eigen::Map<vec3>(&attr.vertices[mesh->vertex_array[new_b_idx].xref * 3]);
+		vec3 vert_c = Eigen::Map<vec3>(&attr.vertices[mesh->vertex_array[new_c_idx].xref * 3]);
+		vec2 uv_a = Eigen::Map<vec2>(mesh->vertex_array[new_a_idx].uv);
+		vec2 uv_b = Eigen::Map<vec2>(mesh->vertex_array[new_b_idx].uv);
+		vec2 uv_c = Eigen::Map<vec2>(mesh->vertex_array[new_c_idx].uv);
+
+		Triangle  vert_tri = { vert_a,vert_b,vert_c };
+		Triangle2 uv_tri = { uv_a,uv_b,uv_c};
+
+		iAABB2 pixel_bounds = transform_to_pixel_space(aabb_from_triangle(uv_tri),mesh);
+		ivec2 min = pixel_bounds.min;
+		ivec2 max = pixel_bounds.max;
+		
+		for (int x = min.x(); x < max.x(); x++) for (int y = min.y(); y < max.y(); y++) {
+			if (pixel_is_processed[x][y])continue;
+			ivec2 pixel = ivec2(x, y);
+			vec3 baryc = compute_barycentric_coords(get_pixel_center(pixel), uv_tri);
+			if (baryc.x()>0 && baryc.z()>0 && baryc.z()>0) {
+				pixel_is_processed[x][y] = true;
+				receivers.push_back(vert_tri.a*baryc.x() + vert_tri.b*baryc.y() + vert_tri.c*baryc.z());
+			}
+		}
+	}
+}
+
+#endif
 
 
 // @NOTE: tinyobj loader is modified to avoid reading mtl file 
@@ -166,8 +229,8 @@ int main(int argc, char * argv[]) {
 	tinyobj_material_t* materials = NULL;
 	size_t num_materials;
 
-	const char *obj_file_path = "../../assets/sponza/sponza.obj";
-	//const char *obj_file_path = "A:/sphere_ico.obj";
+	//const char *obj_file_path = "../../assets/sponza/sponza.obj";
+	const char *obj_file_path = "A:/sphere_ico.obj";
 
 	{
 		size_t data_len = 0;
@@ -240,7 +303,7 @@ int main(int argc, char * argv[]) {
 	input_mesh.face_array = faces;
 
 	Atlas_Output_Mesh *output_mesh =NULL;
-#if 0
+#if 1
 	{
 		// Generate Atlas_Output_Mesh.
 		Atlas_Options atlas_options;
@@ -292,6 +355,11 @@ int main(int argc, char * argv[]) {
 		write_voxel_data(&data, "../voxels.dat");
 	}
 
+	{
+		std::vector<vec3>receivers;
+		//compute_receiver_locations(output_mesh, attr, receivers);
+
+	}
 
 	// Free stuff
 	atlas_free(output_mesh);
@@ -302,5 +370,3 @@ int main(int argc, char * argv[]) {
 	tinyobj_materials_free(materials, num_materials);
 	return 0;
 }
-
-
