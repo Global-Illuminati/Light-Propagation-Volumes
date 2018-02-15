@@ -14,11 +14,13 @@ using namespace Thekla;
 #include "stdint.h"
 #include "math.h";
 
+//#define eigen_assert(x) do{if(!(x)){printf(#x);__debugbreak();}}while(0)
 #include "Eigen\Dense"
 typedef Eigen::Vector2f vec2;
 typedef Eigen::Vector3f vec3;
 typedef Eigen::Vector2i ivec2;
 typedef Eigen::Vector3i ivec3;
+
 
 
 const char *get_file_data(size_t *data_len, const char *file_path) {
@@ -146,14 +148,19 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 	fclose(f);
 }
 #include "voxelizer.hpp"
-#if 0
+
 iAABB2 transform_to_pixel_space(AABB2 bounding_box, Atlas_Output_Mesh *mesh) {
 	iAABB2 ret;
 	ivec2 atlas_size = ivec2(mesh->atlas_width, mesh->atlas_height);
-	ret.min = floor2(bounding_box.min).cwiseMax(0);
-	ret.max = ceil2(bounding_box.max).cwiseMin(atlas_size);
+	ivec2 fl = floor2(bounding_box.min);
+	ivec2 cl = ceil2(bounding_box.max);
+
+	ret.min = fl.cwiseMax(0);
+	ret.max = cl.cwiseMax(atlas_size);
+
 	return ret;
 }
+
 
 vec2 get_pixel_center(ivec2 pixel) {
 	return vec2(pixel.x()+0.5, pixel.y()+0.5);
@@ -170,8 +177,6 @@ vec3 compute_barycentric_coords(vec2 p, Triangle2 &tri) {
 	return vec3(u, v, w);
 }
 
-
-// appearently this crashes... why?
 void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, std::vector<vec3> &receivers) {
 
 	static uint8_t pixel_is_processed[2048][2048];
@@ -204,8 +209,6 @@ void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, 
 		}
 	}
 }
-
-#endif
 
 
 // @NOTE: tinyobj loader is modified to avoid reading mtl file 
@@ -357,7 +360,7 @@ int main(int argc, char * argv[]) {
 
 	{
 		std::vector<vec3>receivers;
-		//compute_receiver_locations(output_mesh, attr, receivers);
+		compute_receiver_locations(output_mesh, attr, receivers);
 
 	}
 
