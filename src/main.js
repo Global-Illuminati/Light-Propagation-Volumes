@@ -2,14 +2,22 @@
 
 var stats;
 var gui;
+
 var settings = {
 	target_fps: 60,
+};
+
+var sceneSettings = {
+	ambientColor: new Float32Array([0.15, 0.15, 0.15, 1.0]),
 };
 
 var app;
 var fullyInitialized = false;
 
+var sceneUniforms;
+
 var camera;
+var directionalLight;
 var meshes = [];
 
 window.addEventListener('DOMContentLoaded', function () {
@@ -76,6 +84,16 @@ function loadShader(vsName, fsName, callback) {
 
 }
 
+function loadImage(imageName, callback) {
+
+	var image = document.createElement('img');
+	image.onload = function() {
+		callback(image);
+	};
+	image.src = 'assets/' + imageName;
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Initialization etc.
 
@@ -95,20 +113,52 @@ function init() {
 	gui = new dat.GUI();
 	gui.add(settings, 'target_fps', 0, 120);
 
+	//////////////////////////////////////
 	// Basic GL state
-	app.clearColor(0.1, 0.1, 0.1, 1.0);
+
+	app.clearColor(1, 1, 1, 1);
 	app.cullBackfaces();
 	app.noBlend();
 
-	// Camera
+	//////////////////////////////////////
+	// Camera stuff
+
 	var cameraPos = vec3.fromValues(0, 2, 4);
 	var cameraRot = quat.fromEuler(quat.create(), -30, 0, 0);
 	camera = new Camera(cameraPos, cameraRot);
 
+	//////////////////////////////////////
+	// Scene setup
+
+	directionalLight = new DirectionalLight();
+
+	sceneUniforms = app.createUniformBuffer([
+		PicoGL.FLOAT_VEC4 /* 0 - ambient color */,
+		PicoGL.FLOAT_VEC4 /* 1 - directional light color */,
+		PicoGL.FLOAT_VEC4 /* 2 - directional light direction */  //,
+		//PicoGL.FLOAT_MAT4 /* 3 - view from world matrix */,
+		//PicoGL.FLOAT_MAT4 /* 4 - projection from view matrix */
+	])
+	.set(0, sceneSettings.ambientColor)
+	.set(1, directionalLight.color)
+	.set(2, directionalLight.direction)
+	//.set(3, camera.viewMatrix)
+	//.set(4, camera.projectionMatrix)
+	.update();
+
+/*
+	camera.onViewMatrixChange = function(newValue) {
+		sceneUniforms.set(3, newValue).update();
+	};
+
+	camera.onProjectionMatrixChange = function(newValue) {
+		sceneUniforms.set(4, newValue).update();
+	};
+*/
 	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 	// Skapa något mer flexibelt än detta så att vi smidigt kan ladda *flera* shaders samtidigt!
 	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-	loadShader('test.vert.glsl', 'test.frag.glsl', function(program) {
+	loadShader('default.vert.glsl', 'default.frag.glsl', function(program) {
 
 		// TODO: Needed?
 		//THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader());
@@ -132,12 +182,27 @@ function init() {
 */
 
 		var boxVertexArray = createExampleVertexArray();
-		var boxDrawCall = app.createDrawCall(program, boxVertexArray);
-		meshes.push({
+
+		var boxDrawCall = app.createDrawCall(program, boxVertexArray)
+		.uniformBlock('SceneUniforms', sceneUniforms);
+
+		// (the size and data is only temporary)
+		var testTexture = app.createTexture2D(1, 1);
+		testTexture.data(new Uint8Array([200, 200, 200, 256]));
+		boxDrawCall.texture('u_texture', testTexture);
+
+		var mesh = {
 			modelMatrix: mat4.create(),
+			texture: testTexture,
 			drawCall: boxDrawCall
+		};
+
+		loadImage('sponza/debug.png', function(image) {
+			mesh.texture.resize(image.width, image.height);
+			mesh.texture.data(image);
 		});
 
+		meshes.push(mesh);
 		fullyInitialized = true;
 
 	});

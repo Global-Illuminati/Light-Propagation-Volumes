@@ -14,6 +14,9 @@ function Camera(position, orientation) {
 	this.updateViewMatrix();
 	this.updateProjectionMatrix();
 
+	this.onViewMatrixChange = null;
+	this.onProjectionMatrixChange = null;
+
 	//
 
 	this.moveSpeed = 0.05;
@@ -105,12 +108,20 @@ Camera.prototype = {
 		var fovy = this.fovDegrees / 180.0 * Math.PI;
 		mat4.perspective(this.projectionMatrix, fovy, aspectRatio, this.near, this.far);
 
+		if (this.onProjectionMatrixChange) {
+			this.onProjectionMatrixChange(this.projectionMatrix);
+		}
+
 	},
 
 	updateViewMatrix: function() {
 
 		mat4.fromRotationTranslation(this.viewMatrix, this.orientation, this.position);
 		mat4.invert(this.viewMatrix, this.viewMatrix);
+
+		if (this.onViewMatrixChange) {
+			this.onViewMatrixChange(this.viewMatrix);
+		}
 
 	},
 
