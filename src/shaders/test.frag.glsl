@@ -1,10 +1,14 @@
 #version 300 es
 precision highp float;
 
-in vec3 v_color;
+in vec3 v_position;
+in vec3 v_normal;
+in vec2 v_tex_coord;
+
 out vec4 o_color;
 
 void main()
 {
-	o_color = vec4(v_color, 1.0);
+	vec3 packed_normal = v_normal * vec3(0.5) + vec3(0.5);
+	o_color = vec4(packed_normal, 1.0);
 }

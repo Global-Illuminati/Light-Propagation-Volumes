@@ -46,7 +46,7 @@ function makeRequest(path, callback) {
 		callback(textData);
 	}).catch(function(error) {
 		console.error('Error loading file at path "' + path + '"');
-  });
+	});
 }
 
 function loadShader(vsName, fsName, callback) {
@@ -101,15 +101,9 @@ function init() {
 	app.noBlend();
 
 	// Camera
-	camera = {
-		position: vec3.fromValues(0, 2, 0),
-		rotation: quat.create(),
-		fovDegrees: 70,
-		near: 0.01,
-		far: 1000,
-		viewMatrix: mat4.create(),
-		projectionMatrix: mat4.create()
-	};
+	var cameraPos = vec3.fromValues(0, 2, 4);
+	var cameraRot = quat.fromEuler(quat.create(), -30, 0, 0);
+	camera = new Camera(cameraPos, cameraRot);
 
 	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 	// Skapa något mer flexibelt än detta så att vi smidigt kan ladda *flera* shaders samtidigt!
@@ -137,9 +131,216 @@ function init() {
 		});
 */
 
+		var boxVertexArray = createExampleVertexArray();
+		var boxDrawCall = app.createDrawCall(program, boxVertexArray);
+		meshes.push({
+			modelMatrix: mat4.create(),
+			drawCall: boxDrawCall
+		});
+
 		fullyInitialized = true;
 
 	});
+
+}
+
+function createExampleVertexArray() {
+
+	var box = createBox();
+
+	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, box.positions);
+	var normals   = app.createVertexBuffer(PicoGL.FLOAT, 3, box.normals);
+	var texCoords = app.createVertexBuffer(PicoGL.FLOAT, 2, box.uvs);
+
+	var vertexArray = app.createVertexArray()
+	.vertexAttributeBuffer(0, positions)
+	.vertexAttributeBuffer(1, normals)
+	.vertexAttributeBuffer(2, texCoords);
+
+	return vertexArray;
+
+}
+
+//
+// TODO: Remove me! From PicoGL examples:
+// https://github.com/tsherif/picogl.js/blob/master/examples/utils/utils.js
+//
+function createBox(options) {
+	options = options || {};
+
+	var dimensions = options.dimensions || [1, 1, 1];
+	var position = options.position || [-dimensions[0] / 2, -dimensions[1] / 2, -dimensions[2] / 2];
+	var x = position[0];
+	var y = position[1];
+	var z = position[2];
+	var width = dimensions[0];
+	var height = dimensions[1];
+	var depth = dimensions[2];
+
+	var fbl = {x: x,         y: y,          z: z + depth};
+	var fbr = {x: x + width, y: y,          z: z + depth};
+	var ftl = {x: x,         y: y + height, z: z + depth};
+	var ftr = {x: x + width, y: y + height, z: z + depth};
+	var bbl = {x: x,         y: y,          z: z };
+	var bbr = {x: x + width, y: y,          z: z };
+	var btl = {x: x,         y: y + height, z: z };
+	var btr = {x: x + width, y: y + height, z: z };
+
+	var positions = new Float32Array([
+			//front
+			fbl.x, fbl.y, fbl.z,
+			fbr.x, fbr.y, fbr.z,
+			ftl.x, ftl.y, ftl.z,
+			ftl.x, ftl.y, ftl.z,
+			fbr.x, fbr.y, fbr.z,
+			ftr.x, ftr.y, ftr.z,
+
+			//right
+			fbr.x, fbr.y, fbr.z,
+			bbr.x, bbr.y, bbr.z,
+			ftr.x, ftr.y, ftr.z,
+			ftr.x, ftr.y, ftr.z,
+			bbr.x, bbr.y, bbr.z,
+			btr.x, btr.y, btr.z,
+
+			//back
+			fbr.x, bbr.y, bbr.z,
+			bbl.x, bbl.y, bbl.z,
+			btr.x, btr.y, btr.z,
+			btr.x, btr.y, btr.z,
+			bbl.x, bbl.y, bbl.z,
+			btl.x, btl.y, btl.z,
+
+			//left
+			bbl.x, bbl.y, bbl.z,
+			fbl.x, fbl.y, fbl.z,
+			btl.x, btl.y, btl.z,
+			btl.x, btl.y, btl.z,
+			fbl.x, fbl.y, fbl.z,
+			ftl.x, ftl.y, ftl.z,
+
+			//top
+			ftl.x, ftl.y, ftl.z,
+			ftr.x, ftr.y, ftr.z,
+			btl.x, btl.y, btl.z,
+			btl.x, btl.y, btl.z,
+			ftr.x, ftr.y, ftr.z,
+			btr.x, btr.y, btr.z,
+
+			//bottom
+			bbl.x, bbl.y, bbl.z,
+			bbr.x, bbr.y, bbr.z,
+			fbl.x, fbl.y, fbl.z,
+			fbl.x, fbl.y, fbl.z,
+			bbr.x, bbr.y, bbr.z,
+			fbr.x, fbr.y, fbr.z
+	]);
+
+	var uvs = new Float32Array([
+			//front
+			0, 0,
+			1, 0,
+			0, 1,
+			0, 1,
+			1, 0,
+			1, 1,
+
+			//right
+			0, 0,
+			1, 0,
+			0, 1,
+			0, 1,
+			1, 0,
+			1, 1,
+
+			//back
+			0, 0,
+			1, 0,
+			0, 1,
+			0, 1,
+			1, 0,
+			1, 1,
+
+			//left
+			0, 0,
+			1, 0,
+			0, 1,
+			0, 1,
+			1, 0,
+			1, 1,
+
+			//top
+			0, 0,
+			1, 0,
+			0, 1,
+			0, 1,
+			1, 0,
+			1, 1,
+
+			//bottom
+			0, 0,
+			1, 0,
+			0, 1,
+			0, 1,
+			1, 0,
+			1, 1
+	]);
+
+	var normals = new Float32Array([
+			// front
+			0, 0, 1,
+			0, 0, 1,
+			0, 0, 1,
+			0, 0, 1,
+			0, 0, 1,
+			0, 0, 1,
+
+			// right
+			1, 0, 0,
+			1, 0, 0,
+			1, 0, 0,
+			1, 0, 0,
+			1, 0, 0,
+			1, 0, 0,
+
+			// back
+			0, 0, -1,
+			0, 0, -1,
+			0, 0, -1,
+			0, 0, -1,
+			0, 0, -1,
+			0, 0, -1,
+
+			// left
+			-1, 0, 0,
+			-1, 0, 0,
+			-1, 0, 0,
+			-1, 0, 0,
+			-1, 0, 0,
+			-1, 0, 0,
+
+			// top
+			0, 1, 0,
+			0, 1, 0,
+			0, 1, 0,
+			0, 1, 0,
+			0, 1, 0,
+			0, 1, 0,
+
+			// bottom
+			0, -1, 0,
+			0, -1, 0,
+			0, -1, 0,
+			0, -1, 0,
+			0, -1, 0,
+			0, -1, 0
+	]);
+
+	return {
+			positions: positions,
+			normals: normals,
+			uvs: uvs
+	};
 
 }
 
@@ -151,18 +352,7 @@ function resize() {
 	var h = window.innerHeight;
 
 	app.resize(w, h);
-
-	// Update camera view matrix
-	var tempTarget = vec3.fromValues(0, 2, 1); // +1z from position
-	var up = vec3.fromValues(0, 1, 0);
-	mat4.lookAt(camera.viewMatrix, camera.position, tempTarget, up);
-
-	// Update camera projection matrix
-	var aspectRatio = w / h;
-	var near = camera.near;
-	var far = camera.far;
-	var fovy = camera.fovDegrees / 180.0 * Math.PI;
-	mat4.perspective(camera.projectionMatrix, fovy, aspectRatio, near, far);
+	camera.resize(w, h);
 
 }
 
@@ -170,17 +360,36 @@ function resize() {
 // Rendering
 
 function render() {
+	var startStamp = new Date().getTime();
 
 	// Don't perform any rendering until everything is loaded in. Could be made better...
 	if (!fullyInitialized) {
+		app.clear();
+		requestAnimationFrame(render);
 		return;
 	}
 
-	var startStamp = new Date().getTime();
 	stats.begin();
 	{
+		camera.update();
+
+		// Clear screen
+		app.defaultDrawFramebuffer();
 		app.clear();
-		// TODO: Do rendering!
+
+		// Render scene
+		for (var i = 0, len = meshes.length; i < len; ++i) {
+
+			var mesh = meshes[i];
+
+			mesh.drawCall
+			.uniform('u_world_from_local', mesh.modelMatrix)
+			.uniform('u_view_from_world', camera.viewMatrix)
+			.uniform('u_projection_from_view', camera.projectionMatrix)
+			.draw();
+
+		}
+
 	}
 	stats.end();
 
