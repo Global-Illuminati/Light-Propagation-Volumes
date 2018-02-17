@@ -34,6 +34,7 @@ window.addEventListener('DOMContentLoaded', function () {
 // Utility
 
 function checkWebGL2Compability() {
+
 	var c = document.createElement('canvas');
 	var webgl2 = c.getContext('webgl2');
 	if (!webgl2) {
@@ -45,52 +46,24 @@ function checkWebGL2Compability() {
 		return false;
 	}
 	return true;
-}
-
-function makeRequest(path, callback) {
-	fetch(path, { method: 'GET' }).then(function(response) {
-		return response.text();
-	}).then(function(textData) {
-		callback(textData);
-	}).catch(function(error) {
-		console.error('Error loading file at path "' + path + '"');
-	});
-}
-
-function loadShader(vsName, fsName, callback) {
-
-	var vsSource, fsSource;
-
-	var basePath = 'src/shaders/';
-	var vsPath = basePath + vsName;
-	var fsPath = basePath + fsName;
-
-	function assembleProgramIfSourceIsLoaded() {
-		if (vsSource && fsSource) {
-			var program = app.createProgram(vsSource, fsSource);
-			callback(program);
-		}
-	}
-
-	makeRequest(vsPath, function(source) {
-		vsSource = source;
-		assembleProgramIfSourceIsLoaded();
-	});
-
-	makeRequest(fsPath, function(source) {
-		fsSource = source;
-		assembleProgramIfSourceIsLoaded();
-	});
 
 }
 
-function loadImage(imageName, callback) {
+function loadTexture(imageName, options) {
+
+	var texture = app.createTexture2D(1, 1, options);
+	texture.data(new Uint8Array([200, 200, 200, 256]));
 
 	var image = document.createElement('img');
 	image.onload = function() {
-		callback(image);
+
+		texture.resize(image.width, image.height);
+		texture.data(image);
+
 	};
 	image.src = 'assets/' + imageName;
+
+	return texture;
 
 }
 
@@ -133,15 +106,15 @@ function init() {
 	directionalLight = new DirectionalLight();
 
 	sceneUniforms = app.createUniformBuffer([
-		PicoGL.FLOAT_VEC4 /* 0 - ambient color */,
-		PicoGL.FLOAT_VEC4 /* 1 - directional light color */,
-		PicoGL.FLOAT_VEC4 /* 2 - directional light direction */  //,
+		PicoGL.FLOAT_VEC4 /* 0 - ambient color */   //,
+		//PicoGL.FLOAT_VEC4 /* 1 - directional light color */,
+		//PicoGL.FLOAT_VEC4 /* 2 - directional light direction */,
 		//PicoGL.FLOAT_MAT4 /* 3 - view from world matrix */,
 		//PicoGL.FLOAT_MAT4 /* 4 - projection from view matrix */
 	])
 	.set(0, sceneSettings.ambientColor)
-	.set(1, directionalLight.color)
-	.set(2, directionalLight.direction)
+	//.set(1, directionalLight.color)
+	//.set(2, directionalLight.direction)
 	//.set(3, camera.viewMatrix)
 	//.set(4, camera.projectionMatrix)
 	.update();
@@ -155,10 +128,24 @@ function init() {
 		sceneUniforms.set(4, newValue).update();
 	};
 */
-	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-	// Skapa något mer flexibelt än detta så att vi smidigt kan ladda *flera* shaders samtidigt!
-	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-	loadShader('default.vert.glsl', 'default.frag.glsl', function(program) {
+
+	var shaderPrograms = {};
+
+	function makeShader(name, data) {
+		var programData = data[name];
+		var program = app.createProgram(programData.vertexSource, programData.fragmentSource);
+		shaderPrograms[name] = program;
+	}
+
+	var shaderLoader = new ShaderLoader('src/shaders/');
+	shaderLoader.addShaderFile('common.glsl');
+	shaderLoader.addShaderFile('scene_uniforms.glsl');
+	shaderLoader.addShaderProgram('test', 'test.vert.glsl', 'test.frag.glsl');
+	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
+	shaderLoader.load(function(data) {
+
+		makeShader('default', data);
+		makeShader('test', data);
 
 		// TODO: Needed?
 		//THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader());
@@ -183,24 +170,16 @@ function init() {
 
 		var boxVertexArray = createExampleVertexArray();
 
-		var boxDrawCall = app.createDrawCall(program, boxVertexArray)
-		.uniformBlock('SceneUniforms', sceneUniforms);
-
-		// (the size and data is only temporary)
-		var testTexture = app.createTexture2D(1, 1);
-		testTexture.data(new Uint8Array([200, 200, 200, 256]));
-		boxDrawCall.texture('u_texture', testTexture);
+		var boxDrawCall = app.createDrawCall(shaderPrograms['default'], boxVertexArray)
+		.uniformBlock('SceneUniforms', sceneUniforms)
+		.texture('u_diffuse_map', loadTexture('test/gravel_col.jpg'))
+		.texture('u_specular_map', loadTexture('test/gravel_spec.jpg'))
+		.texture('u_normal_map', loadTexture('test/gravel_norm.jpg'));
 
 		var mesh = {
 			modelMatrix: mat4.create(),
-			texture: testTexture,
 			drawCall: boxDrawCall
 		};
-
-		loadImage('sponza/debug.png', function(image) {
-			mesh.texture.resize(image.width, image.height);
-			mesh.texture.data(image);
-		});
 
 		meshes.push(mesh);
 		fullyInitialized = true;
@@ -437,6 +416,7 @@ function render() {
 	stats.begin();
 	{
 		camera.update();
+		var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
 
 		// Clear screen
 		app.defaultDrawFramebuffer();
@@ -451,17 +431,19 @@ function render() {
 			.uniform('u_world_from_local', mesh.modelMatrix)
 			.uniform('u_view_from_world', camera.viewMatrix)
 			.uniform('u_projection_from_view', camera.projectionMatrix)
+			.uniform('u_dir_light_color', directionalLight.color)
+			.uniform('u_dir_light_view_direction', dirLightViewDirection)
 			.draw();
 
 		}
 
+		var renderDelta = new Date().getTime() - startStamp;
+		setTimeout( function() {
+			requestAnimationFrame(render);
+		}, 1000 / settings.target_fps - renderDelta-1000/120);
+
 	}
 	stats.end();
-
-	var renderDelta = new Date().getTime() - startStamp;
-	setTimeout( function() {
-		requestAnimationFrame(render);
-	}, 1000 / settings.target_fps - renderDelta-1000/120);
 
 }
 
