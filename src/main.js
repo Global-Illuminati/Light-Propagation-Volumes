@@ -74,7 +74,6 @@ function loadTexture(imageName, options) {
 
 	};
 	image.src = 'assets/' + imageName;
-	console.log('loaded' +  imageName);
 	return texture;
 
 }
@@ -178,7 +177,7 @@ function init() {
 						}
 					}
 
-
+					console.log(objects[i]);
 					var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
 					var boxDrawCall = app.createDrawCall(shaderPrograms['default'], vertexArray)
 					.uniformBlock('SceneUniforms', sceneUniforms)
@@ -273,6 +272,5 @@ function render() {
 	requestAnimationFrame(render);
 */
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,8 @@
  */
 
 'using strict';
- 
+
+
 OBJLoader = function(manager) {
 
     // this.manager = (manager !== undefined) ? manager : THREE.DefaultLoadingManager;
@@ -42,6 +43,9 @@ OBJLoader = function(manager) {
     };
 
 };
+
+
+
 
 OBJLoader.prototype = {
 
@@ -697,11 +701,24 @@ OBJLoader.prototype = {
 
         var container = [];
         container.materialLibraries = [].concat(state.materialLibraries);
-        var tmp_normals  = new Array(state.vertices.length);
+        var tmp_normals  = new Float32Array(state.vertices.length);
         tmp_normals.fill(0);
 
+
+        // temporary variables... 
+        // the higher the level language the more hoops you have to jump through 
+        // in order to remotely fast code.
+
+        var ab = vec3.create();
+        var ac = vec3.create();
+        var n = vec3.create();
+        var a = vec3.create();
+        var b = vec3.create();
+        var c = vec3.create();
+        
+        var num_objects = state.objects.length;
         // calculate sum of all face normals for all vertices
-        for (var i = 0; i < state.objects.length; i++) {
+        for (var i = 0; i < num_objects; i++) {
             var geometry = state.objects[i].geometry;
             for(var j = 0;j < geometry.vertex_indices.length/3;j++)
             {
@@ -712,54 +729,30 @@ OBJLoader.prototype = {
                 var ib = indices[j*3 + 1];
                 var ic = indices[j*3 + 2];
 
-                var ax = verts[ia + 0]; 
-                var ay = verts[ia + 1];
-                var az = verts[ia + 2];
-                var bx = verts[ib + 0];
-                var by = verts[ib + 1];
-                var bz = verts[ib + 2];
-                var cx = verts[ic + 0]; 
-                var cy = verts[ic + 1];
-                var cz = verts[ic + 2];
+                vec3.set(a, verts[ia + 0], verts[ia + 1], verts[ia + 2]);
+                vec3.set(b, verts[ib + 0], verts[ib + 1], verts[ib + 2]);
+                vec3.set(c, verts[ic + 0], verts[ic + 1], verts[ic + 2]);
                 
-                var v1x = ax-bx; 
-                var v1y = ay-by;
-                var v1z = az-bz;
-                var v2x = ax-cx; 
-                var v2y = ay-cy;
-                var v2z = az-cz;
-                
-                var nx = v1y * v2z - v1z * v2y;
-                var ny = v1z * v2x - v1x * v2z;
-                var nz = v1x * v2y - v1y * v2x;
+                vec3.sub(ab,a,b);
+                vec3.sub(ac,a,c);
+                vec3.cross(n, ab,ac);
 
-                tmp_normals[ia + 0]+=nx;
-                tmp_normals[ia + 1]+=ny;
-                tmp_normals[ia + 2]+=nz;
-                tmp_normals[ib + 0]+=nx;
-                tmp_normals[ib + 1]+=ny;
-                tmp_normals[ib + 2]+=nz;
-                tmp_normals[ic + 0]+=nx;
-                tmp_normals[ic + 1]+=ny;
-                tmp_normals[ic + 2]+=nz;
+                tmp_normals[ia + 0]+=n[0];
+                tmp_normals[ia + 1]+=n[1];
+                tmp_normals[ia + 2]+=n[2];
+                tmp_normals[ib + 0]+=n[0];
+                tmp_normals[ib + 1]+=n[1];
+                tmp_normals[ib + 2]+=n[2];
+                tmp_normals[ic + 0]+=n[0];
+                tmp_normals[ic + 1]+=n[1];
+                tmp_normals[ic + 2]+=n[2];
             }
         }
 
-        // normalize the normals
-        for (var i = 0; i < state.objects.length; i++) {
-            var geometry = state.objects[i].geometry;
-            for(var j = 0;j < tmp_normals.length/3;j++)
-            {
-                var x = tmp_normals[j*3+0];
-                var y = tmp_normals[j*3+1];
-                var z = tmp_normals[j*3+2];
-                var m = Math.sqrt(x*x + y*y + z*z);
-                tmp_normals[j*3+0] = x/m;
-                tmp_normals[j*3+1] = y/m;
-                tmp_normals[j*3+2] = z/m;
-            }
-        }
-
+        vec3.forEach(tmp_normals,0,0,0,function(v){
+            vec3.normalize(v,v);
+        });
+       
 
         for (var i = 0; i < state.objects.length; i++) {
             
@@ -782,12 +775,13 @@ OBJLoader.prototype = {
             // that would require quite a large rewrite.
             // now we do atleast calculate the normals correctly.
 
-            var verts_out = [(3 * geometry.vertices.length)];
-            var normals_out =[(3 * geometry.vertices.length)];
+            var verts_out = new Float32Array(3 * geometry.vertex_indices.length);
+            // var normals_out =[(3 * geometry.vertices.length)];
+            var normals_out =new Float32Array(3 * geometry.vertex_indices.length);
             var uvs_out = new Float32Array(geometry.uvs);
             
-            
-            for(var j = 0; j<geometry.vertex_indices.length/3;j++)
+            var num_tris = geometry.vertex_indices.length/3;
+            for(var j = 0; j<num_tris;j++)
             {
                 var verts_in = state.vertices;
                 var normals_in = tmp_normals;
@@ -824,18 +818,18 @@ OBJLoader.prototype = {
             
             container.push(
                 {
-                    normals: new Float32Array(normals_out), 
-                    positions: new Float32Array(verts_out), 
+                    normals: normals_out, 
+                    positions: verts_out, 
                     uvs: uvs_out, 
                     uv2s: new Float32Array(geometry.uv2s),
                     name: object.name,
                     material: materials[0].name, //@Robustness, assumes that we only have one material per object. Not always true! 
                 });
             
-            
         }
+        console.timeEnd('OBJLoader');
         return container;
 
     }
-
 }; 
+

@@ -19,6 +19,7 @@ MTLLoader.prototype = {
     },
 
     parse: function(mtl) {
+        console.time('MTLLoader');
         var material;
         var materials = [];
         var lines = mtl.split('\n');
@@ -56,7 +57,7 @@ MTLLoader.prototype = {
         //push the last material
         if(material && material.name && material.properties)
             materials.push(material);
-
+        console.timeEnd('MTLLoader');
         return materials;
     },
 
