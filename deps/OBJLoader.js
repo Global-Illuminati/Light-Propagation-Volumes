@@ -3,9 +3,11 @@
  * @author mrdoob / http://mrdoob.com/
  */
 
-THREE.OBJLoader = function(manager) {
+'using strict';
+ 
+OBJLoader = function(manager) {
 
-    this.manager = (manager !== undefined) ? manager : THREE.DefaultLoadingManager;
+    // this.manager = (manager !== undefined) ? manager : THREE.DefaultLoadingManager;
 
     this.materials = null;
 
@@ -41,10 +43,10 @@ THREE.OBJLoader = function(manager) {
 
 };
 
-THREE.OBJLoader.prototype = {
+OBJLoader.prototype = {
 
-    constructor: THREE.OBJLoader,
-
+    constructor: OBJLoader,
+    /*
     load: function(url, onLoad, onProgress, onError) {
 
         var scope = this;
@@ -58,12 +60,25 @@ THREE.OBJLoader.prototype = {
         }, onProgress, onError);
 
     },
+    */
+
+    load: function(url, onload) {
+        var xhr = new XMLHttpRequest();
+        scope = this;
+        xhr.onload =  function(){
+            onload(scope.parse(this.response));
+        };
+        xhr.open('GET', url, true);
+        xhr.send();
+    },
+
+
 
     setPath: function(value) {
 
         this.path = value;
 
-    },
+    }, 
 
     setMaterials: function(materials) {
 
@@ -78,6 +93,7 @@ THREE.OBJLoader.prototype = {
             object: {},
 
             vertices: [],
+            num_processed_verties: 0,
             normals: [],
             uvs: [],
             uv2s: [],
@@ -112,7 +128,8 @@ THREE.OBJLoader.prototype = {
                         vertices: [],
                         normals: [],
                         uvs: [],
-                        uv2s: []
+                        uv2s: [],
+                        vertex_indices: [],
                     },
                     materials: [],
                     smooth: true,
@@ -174,7 +191,7 @@ THREE.OBJLoader.prototype = {
                         var lastMultiMaterial = this.currentMaterial();
                         if (lastMultiMaterial && lastMultiMaterial.groupEnd === -1) {
 
-                            lastMultiMaterial.groupEnd = this.geometry.vertices.length / 3;
+                            lastMultiMaterial.groupEnd = state.num_processed_verties / 3;
                             lastMultiMaterial.groupCount = lastMultiMaterial.groupEnd - lastMultiMaterial.groupStart;
                             lastMultiMaterial.inherited = false;
 
@@ -251,7 +268,8 @@ THREE.OBJLoader.prototype = {
 
                 var src = this.vertices;
                 var dst = this.object.geometry.vertices;
-
+                this.num_processed_verties += 3;
+/*                
                 dst.push(src[a + 0]);
                 dst.push(src[a + 1]);
                 dst.push(src[a + 2]);
@@ -261,7 +279,11 @@ THREE.OBJLoader.prototype = {
                 dst.push(src[c + 0]);
                 dst.push(src[c + 1]);
                 dst.push(src[c + 2]);
+  */              
 
+                this.object.geometry.vertex_indices.push(a);
+                this.object.geometry.vertex_indices.push(b);
+                this.object.geometry.vertex_indices.push(c);
             },
 
             addVertexLine: function(a) {
@@ -673,108 +695,148 @@ THREE.OBJLoader.prototype = {
 
         state.finalize();
 
-        var container = new THREE.Group();
+        var container = [];
         container.materialLibraries = [].concat(state.materialLibraries);
+        var tmp_normals  = new Array(state.vertices.length);
+        tmp_normals.fill(0);
 
-        for (var i = 0, l = state.objects.length; i < l; i++) {
+        // calculate sum of all face normals for all vertices
+        for (var i = 0; i < state.objects.length; i++) {
+            var geometry = state.objects[i].geometry;
+            for(var j = 0;j < geometry.vertex_indices.length/3;j++)
+            {
+                var verts = state.vertices;
+                var indices =  geometry.vertex_indices;
 
+                var ia = indices[j*3 + 0];
+                var ib = indices[j*3 + 1];
+                var ic = indices[j*3 + 2];
+
+                var ax = verts[ia + 0]; 
+                var ay = verts[ia + 1];
+                var az = verts[ia + 2];
+                var bx = verts[ib + 0];
+                var by = verts[ib + 1];
+                var bz = verts[ib + 2];
+                var cx = verts[ic + 0]; 
+                var cy = verts[ic + 1];
+                var cz = verts[ic + 2];
+                
+                var v1x = ax-bx; 
+                var v1y = ay-by;
+                var v1z = az-bz;
+                var v2x = ax-cx; 
+                var v2y = ay-cy;
+                var v2z = az-cz;
+                
+                var nx = v1y * v2z - v1z * v2y;
+                var ny = v1z * v2x - v1x * v2z;
+                var nz = v1x * v2y - v1y * v2x;
+
+                tmp_normals[ia + 0]+=nx;
+                tmp_normals[ia + 1]+=ny;
+                tmp_normals[ia + 2]+=nz;
+                tmp_normals[ib + 0]+=nx;
+                tmp_normals[ib + 1]+=ny;
+                tmp_normals[ib + 2]+=nz;
+                tmp_normals[ic + 0]+=nx;
+                tmp_normals[ic + 1]+=ny;
+                tmp_normals[ic + 2]+=nz;
+            }
+        }
+
+        // normalize the normals
+        for (var i = 0; i < state.objects.length; i++) {
+            var geometry = state.objects[i].geometry;
+            for(var j = 0;j < tmp_normals.length/3;j++)
+            {
+                var x = tmp_normals[j*3+0];
+                var y = tmp_normals[j*3+1];
+                var z = tmp_normals[j*3+2];
+                var m = Math.sqrt(x*x + y*y + z*z);
+                tmp_normals[j*3+0] = x/m;
+                tmp_normals[j*3+1] = y/m;
+                tmp_normals[j*3+2] = z/m;
+            }
+        }
+
+
+        for (var i = 0; i < state.objects.length; i++) {
+            
             var object = state.objects[i];
             var geometry = object.geometry;
             var materials = object.materials;
             var isLine = (geometry.type === 'Line');
-
+            
+            
             // Skip o/g line declarations that did not follow with any faces
-            if (geometry.vertices.length === 0) continue;
+            if (geometry.vertex_indices.length === 0) continue;
+            geometry.name = object.name;
+            
+            
+            // flatten the elements ie remove indexing.
+            // since we use lightmaps there's no need to try to keep any form of indexing
+            // all verts are distinct anyway. (on their uv2)
+            // for better perf when that isn't needed we might try to keep indexing
+            // however since we have separate indexing for positions,uvs,uv2s,normals etc
+            // that would require quite a large rewrite.
+            // now we do atleast calculate the normals correctly.
 
-            var buffergeometry = new THREE.BufferGeometry();
-
-            buffergeometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(geometry.vertices), 3));
-
-            if (geometry.normals.length > 0) {
-
-                buffergeometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(geometry.normals), 3));
-
-            } else {
-
-                buffergeometry.computeVertexNormals();
-
-            }
-
-            if (geometry.uvs.length > 0) {
-
-                buffergeometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(geometry.uvs), 2));
-            }
-            if(geometry.uv2s.length > 0)
+            var verts_out = [(3 * geometry.vertices.length)];
+            var normals_out =[(3 * geometry.vertices.length)];
+            var uvs_out = new Float32Array(geometry.uvs);
+            
+            
+            for(var j = 0; j<geometry.vertex_indices.length/3;j++)
             {
-                buffergeometry.addAttribute('uv2', new THREE.BufferAttribute(new Float32Array(geometry.uv2s), 2));
+                var verts_in = state.vertices;
+                var normals_in = tmp_normals;
+                var indices =  geometry.vertex_indices;
+
+                var ia = indices[j*3 + 0];
+                var ib = indices[j*3 + 1];
+                var ic = indices[j*3 + 2];
+
+                verts_out[j*9 + 0]=verts_in[ia+0];
+                verts_out[j*9 + 1]=verts_in[ia+1];
+                verts_out[j*9 + 2]=verts_in[ia+2];
+                verts_out[j*9 + 3]=verts_in[ib+0];
+                verts_out[j*9 + 4]=verts_in[ib+1];
+                verts_out[j*9 + 5]=verts_in[ib+2];
+                verts_out[j*9 + 6]=verts_in[ic+0];
+                verts_out[j*9 + 7]=verts_in[ic+1];
+                verts_out[j*9 + 8]=verts_in[ic+2];
+
+                normals_out[j*9 + 0]=normals_in[ia+0]; 
+                normals_out[j*9 + 1]=normals_in[ia+1];
+                normals_out[j*9 + 2]=normals_in[ia+2];
+                normals_out[j*9 + 3]=normals_in[ib+0];
+                normals_out[j*9 + 4]=normals_in[ib+1];
+                normals_out[j*9 + 5]=normals_in[ib+2];
+                normals_out[j*9 + 6]=normals_in[ic+0];
+                normals_out[j*9 + 7]=normals_in[ic+1];
+                normals_out[j*9 + 8]=normals_in[ic+2];
             }
+            // console.log(materials);
 
-            // Create materials
-
-            var createdMaterials = [];
-
-            for (var mi = 0, miLen = materials.length; mi < miLen; mi++) {
-
-                var sourceMaterial = materials[mi];
-                var material = undefined;
-
-                if (this.materials !== null) {
-
-                    material = this.materials.create(sourceMaterial.name);
-
-                    // mtl etc. loaders probably can't create line materials correctly, copy properties to a line material.
-                    if (isLine && material && !(material instanceof THREE.LineBasicMaterial)) {
-
-                        var materialLine = new THREE.LineBasicMaterial();
-                        materialLine.copy(material);
-                        material = materialLine;
-
-                    }
-
-                }
-
-                if (!material) {
-
-                    material = (!isLine ? new THREE.MeshPhongMaterial() : new THREE.LineBasicMaterial());
-                    material.name = sourceMaterial.name;
-
-                }
-
-                material.shading = sourceMaterial.smooth ? THREE.SmoothShading : THREE.FlatShading;
-
-                createdMaterials.push(material);
-
-            }
-
-            // Create mesh
-
-            var mesh;
-
-            if (createdMaterials.length > 1) {
-
-                for (var mi = 0, miLen = materials.length; mi < miLen; mi++) {
-
-                    var sourceMaterial = materials[mi];
-                    buffergeometry.addGroup(sourceMaterial.groupStart, sourceMaterial.groupCount, mi);
-
-                }
-
-                var multiMaterial = new THREE.MultiMaterial(createdMaterials);
-                mesh = (!isLine ? new THREE.Mesh(buffergeometry, multiMaterial) : new THREE.Line(buffergeometry, multiMaterial));
-
-            } else {
-
-                mesh = (!isLine ? new THREE.Mesh(buffergeometry, createdMaterials[0]) : new THREE.Line(buffergeometry, createdMaterials[0]));
-            }
-
-            mesh.name = object.name;
-
-            container.add(mesh);
-
+            var material = {};
+            
+            console.log("stufff");
+            console.log(materials[0]);
+           
+            
+            container.push(
+                {
+                    normals: new Float32Array(normals_out), 
+                    positions: new Float32Array(verts_out), 
+                    uvs: uvs_out, 
+                    uv2s: new Float32Array(geometry.uv2s),
+                    name: object.name,
+                    material: materials[0].name, //@Robustness, assumes that we only have one material per object. Not always true! 
+                });
+            
+            
         }
-
-        console.timeEnd('OBJLoader');
-
         return container;
 
     }
