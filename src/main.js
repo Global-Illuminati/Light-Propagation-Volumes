@@ -147,28 +147,31 @@ function init() {
 		makeShader('default', data);
 		makeShader('test', data);
 
-		// TODO: Needed?
-		//THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader());
-/*
-		var mtlLoader = new MTLLoader();
-		mtlLoader.setPath('assets/sponza/');
-		mtlLoader.load('sponza.mtl', function(materials) {
-			materials.preload();
 
-			var objLoader = new OBJLoader();
-			objLoader.setMaterials(materials);
+		/*
+		uncomment to load sponza scene (currently without any textures)
 
-			objLoader.load('assets/sponza/sponza.obj', function(objects) {
-				for (var i = 0; i < objects.length; ++i) {
-					// TODO TODO TODO TODO TODO TODO TODO
-					meshes.push(objects[i]);
-					// TODO TODO TODO TODO TODO TODO TODO
-				}
-			});
+		var objLoader = new OBJLoader();
+		objLoader.load('assets/sponza/sponza.obj', function(objects) {
+			for (var i = 0; i < objects.length; ++i) {
+				var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
+
+				var boxDrawCall = app.createDrawCall(shaderPrograms['default'], vertexArray)
+				.uniformBlock('SceneUniforms', sceneUniforms)
+				.texture('u_diffuse_map', loadTexture('test/gravel_col.jpg'))
+				.texture('u_specular_map', loadTexture('test/gravel_spec.jpg'))
+				.texture('u_normal_map', loadTexture('test/gravel_norm.jpg'));
+		
+				var mesh = {
+					modelMatrix: mat4.create(),
+					drawCall: boxDrawCall
+				};
+				meshes.push(mesh);
+			}
 		});
-*/
+		*/
 
-		var boxVertexArray = createExampleVertexArray();
+		var boxVertexArray = createVertexArrayFromMeshInfo(createBox());
 
 		var boxDrawCall = app.createDrawCall(shaderPrograms['default'], boxVertexArray)
 		.uniformBlock('SceneUniforms', sceneUniforms)
@@ -188,22 +191,18 @@ function init() {
 
 }
 
-function createExampleVertexArray() {
-
-	var box = createBox();
-
-	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, box.positions);
-	var normals   = app.createVertexBuffer(PicoGL.FLOAT, 3, box.normals);
-	var texCoords = app.createVertexBuffer(PicoGL.FLOAT, 2, box.uvs);
+function createVertexArrayFromMeshInfo(meshInfo) {
+	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, meshInfo.positions);
+	var normals   = app.createVertexBuffer(PicoGL.FLOAT, 3, meshInfo.normals);
+	var texCoords = app.createVertexBuffer(PicoGL.FLOAT, 2, meshInfo.uvs);
 
 	var vertexArray = app.createVertexArray()
 	.vertexAttributeBuffer(0, positions)
 	.vertexAttributeBuffer(1, normals)
 	.vertexAttributeBuffer(2, texCoords);
-
 	return vertexArray;
-
 }
+
 
 //
 // TODO: Remove me! From PicoGL examples:
@@ -421,6 +420,7 @@ function render() {
 		// Clear screen
 		app.defaultDrawFramebuffer();
 		app.clear();
+		app.depthTest();
 
 		// Render scene
 		for (var i = 0, len = meshes.length; i < len; ++i) {

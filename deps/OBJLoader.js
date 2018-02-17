@@ -817,12 +817,9 @@ OBJLoader.prototype = {
                 normals_out[j*9 + 7]=normals_in[ic+1];
                 normals_out[j*9 + 8]=normals_in[ic+2];
             }
-            // console.log(materials);
 
             var material = {};
             
-            console.log("stufff");
-            console.log(materials[0]);
            
             
             container.push(
