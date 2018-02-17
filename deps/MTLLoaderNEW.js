@@ -8,18 +8,20 @@ MTLLoader.prototype = {
     constructor: MTLLoader(),
 
     //TODO: break loader into separate file and send callbacks to load function as params
-    load: function(url) {
+    load: function(url, onload) {
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url, true);
+        var scope = this;
         xhr.onload = function() {
-            parse(this.response);
+            onload(scope.parse(this.response));
         }
+        xhr.send();
     },
 
     parse: function(mtl) {
         var material;
         var materials = [];
-        var lines = text.split('\n');
+        var lines = mtl.split('\n');
 
         for(var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();

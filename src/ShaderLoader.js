@@ -21,10 +21,7 @@ ShaderLoader.prototype = (function() {
 			return response.text();
 		}).then(function(textData) {
 			callback(fileName, textData);
-		}).catch(function(error) {
-			console.error('ShaderLoader: Error loading file at path "' + path + '"');
 		});
-
 	};
 
 	return {

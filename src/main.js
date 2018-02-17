@@ -74,7 +74,7 @@ function loadTexture(imageName, options) {
 
 	};
 	image.src = 'assets/' + imageName;
-
+	console.log('loaded' +  imageName);
 	return texture;
 
 }
@@ -162,24 +162,39 @@ function init() {
 		makeShader('default', data);
 		makeShader('test', data);
 
+		
 		var objLoader = new OBJLoader();
+		var mtlLoader = new MTLLoader();
+
+
+		
 		objLoader.load('assets/sponza/sponza.obj', function(objects) {
-			for (var i = 0; i < objects.length; ++i) {
-				var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
+			mtlLoader.load("assets/sponza/sponza.mtl",function(materials){
+				for (var i = 0; i < objects.length; ++i) {
+					var material = undefined;
+					for(var m = 0; m<materials.length;m++){
+						if(materials[m].name === objects[i].material){
+							material = materials[m];
+						}
+					}
 
-				var boxDrawCall = app.createDrawCall(shaderPrograms['default'], vertexArray)
-				.uniformBlock('SceneUniforms', sceneUniforms)
-				.texture('u_diffuse_map', loadTexture('test/gravel_col.jpg'))
-				.texture('u_specular_map', loadTexture('test/gravel_spec.jpg'))
-				.texture('u_normal_map', loadTexture('test/gravel_norm.jpg'));
 
-				var mesh = {
-					modelMatrix: mat4.create(),
-					drawCall: boxDrawCall
-				};
-				meshes.push(mesh);
-			}
+					var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
+					var boxDrawCall = app.createDrawCall(shaderPrograms['default'], vertexArray)
+					.uniformBlock('SceneUniforms', sceneUniforms)
+					.texture('u_diffuse_map',  loadTexture('sponza/' + material.properties.map_Kd))
+					.texture('u_specular_map', loadTexture('sponza/' + material.properties.map_Ks))
+					.texture('u_normal_map',   loadTexture('sponza/' + material.properties.map_norm));
+
+					var mesh = {
+						modelMatrix: mat4.create(),
+						drawCall: boxDrawCall
+					};
+					meshes.push(mesh);
+				}
+			});
 		});
+
 
 	});
 
