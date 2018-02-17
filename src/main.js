@@ -155,10 +155,23 @@ function init() {
 		sceneUniforms.set(4, newValue).update();
 	};
 */
-	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-	// Skapa något mer flexibelt än detta så att vi smidigt kan ladda *flera* shaders samtidigt!
-	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-	loadShader('default.vert.glsl', 'default.frag.glsl', function(program) {
+
+	var shaderPrograms = {};
+
+	function makeShader(name, data) {
+		var programData = data[name];
+		var program = app.createProgram(programData.vertexSource, programData.fragmentSource);
+		shaderPrograms[name] = program;
+	}
+
+	var shaderLoader = new ShaderLoader('src/shaders/');
+	shaderLoader.addShaderFile('scene_uniforms.glsl');
+	shaderLoader.addShaderProgram('test', 'test.vert.glsl', 'test.frag.glsl');
+	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
+	shaderLoader.load(function(data) {
+
+		makeShader('default', data);
+		makeShader('test', data);
 
 		// TODO: Needed?
 		//THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader());
@@ -183,7 +196,7 @@ function init() {
 
 		var boxVertexArray = createExampleVertexArray();
 
-		var boxDrawCall = app.createDrawCall(program, boxVertexArray)
+		var boxDrawCall = app.createDrawCall(shaderPrograms['default'], boxVertexArray)
 		.uniformBlock('SceneUniforms', sceneUniforms);
 
 		// (the size and data is only temporary)

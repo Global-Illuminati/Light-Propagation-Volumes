@@ -9,12 +9,7 @@ in vec3 v_position;
 in vec3 v_normal;
 in vec2 v_tex_coord;
 
-layout(std140) uniform SceneUniforms {
-	vec4 u_ambient_color;
-	//
-	vec4 u_directional_light_color;
-	vec4 u_directional_light_direction;
-};
+#include <scene_uniforms.glsl>
 
 uniform sampler2D u_texture;
 

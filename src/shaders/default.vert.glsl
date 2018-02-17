@@ -4,12 +4,7 @@ layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;
 layout(location = 2) in vec2 a_tex_coord;
 
-layout(std140) uniform SceneUniforms {
-	vec4 u_ambient_color;
-	//
-	vec4 u_directional_light_color;
-	vec4 u_directional_light_direction;
-};
+#include <scene_uniforms.glsl>
 
 uniform mat4 u_world_from_local;
 uniform mat4 u_view_from_world;
