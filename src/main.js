@@ -57,6 +57,12 @@ function checkWebGL2Compability() {
 
 function loadTexture(imageName, options) {
 
+	var options = options || {};
+
+	options['minFilter'] = PicoGL.LINEAR_MIPMAP_NEAREST;
+	options['magFilter'] = PicoGL.LINEAR;
+	options['mipmaps'] = true;
+
 	var texture = app.createTexture2D(1, 1, options);
 	texture.data(new Uint8Array([200, 200, 200, 256]));
 
@@ -156,10 +162,6 @@ function init() {
 		makeShader('default', data);
 		makeShader('test', data);
 
-
-		/*
-		uncomment to load sponza scene (currently without any textures)
-
 		var objLoader = new OBJLoader();
 		objLoader.load('assets/sponza/sponza.obj', function(objects) {
 			for (var i = 0; i < objects.length; ++i) {
@@ -170,7 +172,7 @@ function init() {
 				.texture('u_diffuse_map', loadTexture('test/gravel_col.jpg'))
 				.texture('u_specular_map', loadTexture('test/gravel_spec.jpg'))
 				.texture('u_normal_map', loadTexture('test/gravel_norm.jpg'));
-		
+
 				var mesh = {
 					modelMatrix: mat4.create(),
 					drawCall: boxDrawCall
@@ -178,23 +180,6 @@ function init() {
 				meshes.push(mesh);
 			}
 		});
-		*/
-
-		var boxVertexArray = createVertexArrayFromMeshInfo(createBox());
-
-		var boxDrawCall = app.createDrawCall(shaderPrograms['default'], boxVertexArray)
-		.uniformBlock('SceneUniforms', sceneUniforms)
-		.texture('u_diffuse_map', loadTexture('test/gravel_col.jpg'))
-		.texture('u_specular_map', loadTexture('test/gravel_spec.jpg'))
-		.texture('u_normal_map', loadTexture('test/gravel_norm.jpg'));
-
-		var mesh = {
-			modelMatrix: mat4.create(),
-			drawCall: boxDrawCall
-		};
-
-		meshes.push(mesh);
-		fullyInitialized = true;
 
 	});
 
@@ -210,190 +195,6 @@ function createVertexArrayFromMeshInfo(meshInfo) {
 	.vertexAttributeBuffer(1, normals)
 	.vertexAttributeBuffer(2, texCoords);
 	return vertexArray;
-}
-
-
-//
-// TODO: Remove me! From PicoGL examples:
-// https://github.com/tsherif/picogl.js/blob/master/examples/utils/utils.js
-//
-function createBox(options) {
-	options = options || {};
-
-	var dimensions = options.dimensions || [1, 1, 1];
-	var position = options.position || [-dimensions[0] / 2, -dimensions[1] / 2, -dimensions[2] / 2];
-	var x = position[0];
-	var y = position[1];
-	var z = position[2];
-	var width = dimensions[0];
-	var height = dimensions[1];
-	var depth = dimensions[2];
-
-	var fbl = {x: x,         y: y,          z: z + depth};
-	var fbr = {x: x + width, y: y,          z: z + depth};
-	var ftl = {x: x,         y: y + height, z: z + depth};
-	var ftr = {x: x + width, y: y + height, z: z + depth};
-	var bbl = {x: x,         y: y,          z: z };
-	var bbr = {x: x + width, y: y,          z: z };
-	var btl = {x: x,         y: y + height, z: z };
-	var btr = {x: x + width, y: y + height, z: z };
-
-	var positions = new Float32Array([
-			//front
-			fbl.x, fbl.y, fbl.z,
-			fbr.x, fbr.y, fbr.z,
-			ftl.x, ftl.y, ftl.z,
-			ftl.x, ftl.y, ftl.z,
-			fbr.x, fbr.y, fbr.z,
-			ftr.x, ftr.y, ftr.z,
-
-			//right
-			fbr.x, fbr.y, fbr.z,
-			bbr.x, bbr.y, bbr.z,
-			ftr.x, ftr.y, ftr.z,
-			ftr.x, ftr.y, ftr.z,
-			bbr.x, bbr.y, bbr.z,
-			btr.x, btr.y, btr.z,
-
-			//back
-			fbr.x, bbr.y, bbr.z,
-			bbl.x, bbl.y, bbl.z,
-			btr.x, btr.y, btr.z,
-			btr.x, btr.y, btr.z,
-			bbl.x, bbl.y, bbl.z,
-			btl.x, btl.y, btl.z,
-
-			//left
-			bbl.x, bbl.y, bbl.z,
-			fbl.x, fbl.y, fbl.z,
-			btl.x, btl.y, btl.z,
-			btl.x, btl.y, btl.z,
-			fbl.x, fbl.y, fbl.z,
-			ftl.x, ftl.y, ftl.z,
-
-			//top
-			ftl.x, ftl.y, ftl.z,
-			ftr.x, ftr.y, ftr.z,
-			btl.x, btl.y, btl.z,
-			btl.x, btl.y, btl.z,
-			ftr.x, ftr.y, ftr.z,
-			btr.x, btr.y, btr.z,
-
-			//bottom
-			bbl.x, bbl.y, bbl.z,
-			bbr.x, bbr.y, bbr.z,
-			fbl.x, fbl.y, fbl.z,
-			fbl.x, fbl.y, fbl.z,
-			bbr.x, bbr.y, bbr.z,
-			fbr.x, fbr.y, fbr.z
-	]);
-
-	var uvs = new Float32Array([
-			//front
-			0, 0,
-			1, 0,
-			0, 1,
-			0, 1,
-			1, 0,
-			1, 1,
-
-			//right
-			0, 0,
-			1, 0,
-			0, 1,
-			0, 1,
-			1, 0,
-			1, 1,
-
-			//back
-			0, 0,
-			1, 0,
-			0, 1,
-			0, 1,
-			1, 0,
-			1, 1,
-
-			//left
-			0, 0,
-			1, 0,
-			0, 1,
-			0, 1,
-			1, 0,
-			1, 1,
-
-			//top
-			0, 0,
-			1, 0,
-			0, 1,
-			0, 1,
-			1, 0,
-			1, 1,
-
-			//bottom
-			0, 0,
-			1, 0,
-			0, 1,
-			0, 1,
-			1, 0,
-			1, 1
-	]);
-
-	var normals = new Float32Array([
-			// front
-			0, 0, 1,
-			0, 0, 1,
-			0, 0, 1,
-			0, 0, 1,
-			0, 0, 1,
-			0, 0, 1,
-
-			// right
-			1, 0, 0,
-			1, 0, 0,
-			1, 0, 0,
-			1, 0, 0,
-			1, 0, 0,
-			1, 0, 0,
-
-			// back
-			0, 0, -1,
-			0, 0, -1,
-			0, 0, -1,
-			0, 0, -1,
-			0, 0, -1,
-			0, 0, -1,
-
-			// left
-			-1, 0, 0,
-			-1, 0, 0,
-			-1, 0, 0,
-			-1, 0, 0,
-			-1, 0, 0,
-			-1, 0, 0,
-
-			// top
-			0, 1, 0,
-			0, 1, 0,
-			0, 1, 0,
-			0, 1, 0,
-			0, 1, 0,
-			0, 1, 0,
-
-			// bottom
-			0, -1, 0,
-			0, -1, 0,
-			0, -1, 0,
-			0, -1, 0,
-			0, -1, 0,
-			0, -1, 0
-	]);
-
-	return {
-			positions: positions,
-			normals: normals,
-			uvs: uvs
-	};
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////
