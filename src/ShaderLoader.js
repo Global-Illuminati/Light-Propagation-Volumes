@@ -46,9 +46,10 @@ ShaderLoader.prototype = (function() {
 				if (this.shaders.hasOwnProperty(includeFileName)) {
 
 					var includedSource = this.resolveSource(this.shaders[includeFileName]);
-					var resolved = source.replace(this.includeRegEx, includedSource);
+					var resolved = source.replace(matches[0], includedSource);
 
-					return resolved;
+					// Recursively resolve until there is nothing more to resolve
+					return this.resolveSource(resolved);
 
 				} else {
 
