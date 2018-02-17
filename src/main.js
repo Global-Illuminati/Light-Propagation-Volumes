@@ -1,5 +1,7 @@
 'using strict';
 
+////////////////////////////////////////////////////////////////////////////////
+
 var stats;
 var gui;
 
@@ -11,8 +13,12 @@ var sceneSettings = {
 	ambientColor: new Float32Array([0.15, 0.15, 0.15, 1.0]),
 };
 
+////////////////////////////////////////////////////////////////////////////////
+
 var app;
-var fullyInitialized = false;
+
+var gpuTimePanel;
+var picoTimer;
 
 var sceneUniforms;
 
@@ -82,6 +88,9 @@ function init() {
 	stats = new Stats();
 	stats.showPanel(1); // (frame time)
 	document.body.appendChild(stats.dom);
+
+	gpuTimePanel = stats.addPanel(new Stats.Panel('MS (GPU)', '#ff8', '#221'));
+	picoTimer = app.createTimer();
 
 	gui = new dat.GUI();
 	gui.add(settings, 'target_fps', 0, 120);
@@ -406,14 +415,8 @@ function resize() {
 function render() {
 	var startStamp = new Date().getTime();
 
-	// Don't perform any rendering until everything is loaded in. Could be made better...
-	if (!fullyInitialized) {
-		app.clear();
-		requestAnimationFrame(render);
-		return;
-	}
-
 	stats.begin();
+	picoTimer.start();
 	{
 		camera.update();
 		var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
@@ -443,8 +446,16 @@ function render() {
 		}, 1000 / settings.target_fps - renderDelta-1000/120);
 
 	}
+	picoTimer.end();
 	stats.end();
 
+	if (picoTimer.ready()) {
+		gpuTimePanel.update(picoTimer.gpuTime, 35);
+	}
+
+/*
+	requestAnimationFrame(render);
+*/
 }
 
 
