@@ -167,7 +167,7 @@ function init() {
 
 
 		
-		objLoader.load('assets/sponza/sponza.obj', function(objects) {
+		objLoader.load('assets/sponza/sponza.obj_2xuv', function(objects) {
 			mtlLoader.load("assets/sponza/sponza.mtl",function(materials){
 				for (var i = 0; i < objects.length; ++i) {
 					var material = undefined;
