@@ -5,7 +5,7 @@ in vec3 v_position;
 in vec3 v_normal;
 in vec2 v_tex_coord;
 
-out vec4 o_color;
+layout(location = 0) out vec4 o_color;
 
 void main()
 {

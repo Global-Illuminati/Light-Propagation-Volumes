@@ -10,17 +10,19 @@ precision highp float;
 in vec3 v_position;
 in vec3 v_normal;
 in vec2 v_tex_coord;
+in vec4 v_light_space_position;
 
 #include <scene_uniforms.glsl>
 
 uniform sampler2D u_diffuse_map;
 uniform sampler2D u_specular_map;
 uniform sampler2D u_normal_map;
+uniform sampler2D u_shadow_map;
 
 uniform vec3 u_dir_light_color;
 uniform vec3 u_dir_light_view_direction;
 
-out vec4 o_color;
+layout(location = 0) out vec4 o_color;
 
 void main()
 {
@@ -40,18 +42,27 @@ void main()
 
 	//////////////////////////////////////////////////////////
 	// directional light
-	if (lambertian > 0.0)
+
+	// shadow visibility
+	// TODO: Probably don't hardcode bias
+	// TODO: Send in shadow map pixel size as a uniform
+	const float bias = 0.0029;
+	vec2 texel_size = vec2(1.0) / vec2(textureSize(u_shadow_map, 0));
+	vec3 light_space = v_light_space_position.xyz / v_light_space_position.w;
+	float visibility = sample_shadow_map_pcf(u_shadow_map, light_space.xy, light_space.z, texel_size, bias);
+
+	if (lambertian > 0.0 && visibility > 0.0)
 	{
 		vec3 wh = normalize(wi + wo);
 
 		// diffuse
-		color += diffuse * lambertian * u_dir_light_color;
+		color += visibility * diffuse * lambertian * u_dir_light_color;
 
 		// specular
 		float specular_angle = saturate(dot(N, wh));
 		float specular_power = pow(2.0, 13.0 * shininess); // (fake glossiness from the specular map)
 		float specular = pow(specular_angle, specular_power);
-		color += shininess * specular * u_dir_light_color;
+		color += visibility * shininess * specular * u_dir_light_color;
 	}
 
 	o_color = vec4(color, 1.0);

@@ -1,18 +1,17 @@
 #version 300 es
 
-layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec3 a_normal;
-layout(location = 2) in vec2 a_tex_coord;
-
+#include <mesh_attributes.glsl>
 #include <scene_uniforms.glsl>
 
 uniform mat4 u_world_from_local;
 uniform mat4 u_view_from_world;
 uniform mat4 u_projection_from_view;
+uniform mat4 u_light_projection_from_world;
 
 out vec3 v_position;
 out vec3 v_normal;
 out vec2 v_tex_coord;
+out vec4 v_light_space_position;
 
 void main()
 {
@@ -25,6 +24,13 @@ void main()
 	v_position  = vec3(view_space_position);
 	v_normal    = vec3(view_space_normal);
 	v_tex_coord = a_tex_coord;
+
+	// TODO: Clean up these these transformations into one matrix multiplication
+	// (i.e. from camera view space to light projected with bias and offset)
+	vec4 world_space_position = u_world_from_local * vec4(a_position, 1.0);
+	v_light_space_position = u_light_projection_from_world * vec4(world_space_position.xyz, 1.0);
+	v_light_space_position *= vec4(0.5, 0.5, 0.5, 1.0);
+	v_light_space_position += vec4(0.5, 0.5, 0.5, 0.0);
 
 	gl_Position = u_projection_from_view * view_space_position;
 

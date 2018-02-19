@@ -192,7 +192,7 @@ Camera.prototype = {
 				vec2.copy(this.lastMousePos, this.currentMousePos);
 
 				didChange = true;
-				
+
 			}
 		}
 

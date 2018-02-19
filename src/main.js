@@ -20,7 +20,12 @@ var app;
 var gpuTimePanel;
 var picoTimer;
 
+var blitTextureDrawCall;
+
 var sceneUniforms;
+
+var shadowMapSize = 4096;
+var shadowMapFramebuffer;
 
 var camera;
 var directionalLight;
@@ -88,7 +93,7 @@ function init() {
 	}
 
 	var canvas = document.getElementById('canvas');
-	app = PicoGL.createApp(canvas);
+	app = PicoGL.createApp(canvas, { antialias: true });
 
 	stats = new Stats();
 	stats.showPanel(1); // (frame time)
@@ -103,21 +108,126 @@ function init() {
 	//////////////////////////////////////
 	// Basic GL state
 
-	app.clearColor(1, 1, 1, 1);
+	app.clearColor(0, 0, 0, 1);
 	app.cullBackfaces();
 	app.noBlend();
 
 	//////////////////////////////////////
 	// Camera stuff
 
-	var cameraPos = vec3.fromValues(0, 2, 4);
-	var cameraRot = quat.fromEuler(quat.create(), -30, 0, 0);
+	var cameraPos = vec3.fromValues(-15, 3, 0);
+	var cameraRot = quat.fromEuler(quat.create(), 15, -90, 0);
 	camera = new Camera(cameraPos, cameraRot);
 
 	//////////////////////////////////////
 	// Scene setup
 
 	directionalLight = new DirectionalLight();
+	setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
+
+	setupSceneUniforms();
+
+	var shaderPrograms = {};
+
+	function makeShader(name, data) {
+		var programData = data[name];
+		var program = app.createProgram(programData.vertexSource, programData.fragmentSource);
+		shaderPrograms[name] = program;
+		return program;
+	}
+
+	var shaderLoader = new ShaderLoader('src/shaders/');
+	shaderLoader.addShaderFile('common.glsl');
+	shaderLoader.addShaderFile('scene_uniforms.glsl');
+	shaderLoader.addShaderFile('mesh_attributes.glsl');
+	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
+	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
+	shaderLoader.addShaderProgram('shadowMapping', 'shadow_mapping.vert.glsl', 'shadow_mapping.frag.glsl');
+	shaderLoader.load(function(data) {
+
+		var textureBlitShader = makeShader('textureBlit', data);
+		setupTextureBlitDrawCall(textureBlitShader);
+
+		makeShader('default', data);
+		makeShader('shadowMapping', data);
+
+		var objLoader = new OBJLoader();
+		var mtlLoader = new MTLLoader();
+
+		objLoader.load('assets/sponza/sponza.obj_2xuv', function(objects) {
+			mtlLoader.load("assets/sponza/sponza.mtl",function(materials){
+				for (var i = 0; i < objects.length; ++i) {
+					var material = undefined;
+					for(var m = 0; m<materials.length;m++){
+						if(materials[m].name === objects[i].material){
+							material = materials[m];
+						}
+					}
+
+					var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
+
+					var drawCall = app.createDrawCall(shaderPrograms['default'], vertexArray)
+					.uniformBlock('SceneUniforms', sceneUniforms)
+					.texture('u_diffuse_map',  loadTexture('sponza/' + material.properties.map_Kd))
+					.texture('u_specular_map', loadTexture('sponza/' + material.properties.map_Ks))
+					.texture('u_normal_map',   loadTexture('sponza/' + material.properties.map_norm));
+
+					var shadowMappingDrawCall = app.createDrawCall(shaderPrograms['shadowMapping'], vertexArray);
+
+					var mesh = {
+						modelMatrix: mat4.create(),
+						drawCall: drawCall,
+						shadowMapDrawCall: shadowMappingDrawCall
+					};
+					meshes.push(mesh);
+				}
+			});
+		});
+
+
+	});
+
+}
+
+function setupTextureBlitDrawCall(shader) {
+
+	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, new Float32Array([
+		-1, -1, 0,
+		+3, -1, 0,
+		-1, +3, 0
+	]));
+
+	var vertexArray = app.createVertexArray()
+	.vertexAttributeBuffer(0, positions);
+
+	blitTextureDrawCall = app.createDrawCall(shader, vertexArray);
+
+}
+
+function setupDirectionalLightShadowMapFramebuffer(size) {
+
+	var colorBuffer = app.createTexture2D(size, size, {
+		format: PicoGL.RED,
+		internalFormat: PicoGL.R8,
+		minFilter: PicoGL.NEAREST,
+		magFilter: PicoGL.NEAREST
+	});
+
+	var depthBuffer = app.createTexture2D(size, size, {
+		format: PicoGL.DEPTH_COMPONENT
+	});
+
+	shadowMapFramebuffer = app.createFramebuffer()
+	.colorTarget(0, colorBuffer)
+	.depthTarget(depthBuffer);
+
+}
+
+function setupSceneUniforms() {
+
+	//
+	// TODO: Fix all this! I got some weird results when I tried all this before but it should work...
+	//
 
 	sceneUniforms = app.createUniformBuffer([
 		PicoGL.FLOAT_VEC4 /* 0 - ambient color */   //,
@@ -142,60 +252,6 @@ function init() {
 		sceneUniforms.set(4, newValue).update();
 	};
 */
-
-	var shaderPrograms = {};
-
-	function makeShader(name, data) {
-		var programData = data[name];
-		var program = app.createProgram(programData.vertexSource, programData.fragmentSource);
-		shaderPrograms[name] = program;
-	}
-
-	var shaderLoader = new ShaderLoader('src/shaders/');
-	shaderLoader.addShaderFile('common.glsl');
-	shaderLoader.addShaderFile('scene_uniforms.glsl');
-	shaderLoader.addShaderProgram('test', 'test.vert.glsl', 'test.frag.glsl');
-	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
-	shaderLoader.load(function(data) {
-
-		makeShader('default', data);
-		makeShader('test', data);
-
-		
-		var objLoader = new OBJLoader();
-		var mtlLoader = new MTLLoader();
-
-
-		
-		objLoader.load('assets/sponza/sponza.obj_2xuv', function(objects) {
-			mtlLoader.load("assets/sponza/sponza.mtl",function(materials){
-				for (var i = 0; i < objects.length; ++i) {
-					var material = undefined;
-					for(var m = 0; m<materials.length;m++){
-						if(materials[m].name === objects[i].material){
-							material = materials[m];
-						}
-					}
-
-					console.log(objects[i]);
-					var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
-					var boxDrawCall = app.createDrawCall(shaderPrograms['default'], vertexArray)
-					.uniformBlock('SceneUniforms', sceneUniforms)
-					.texture('u_diffuse_map',  loadTexture('sponza/' + material.properties.map_Kd))
-					.texture('u_specular_map', loadTexture('sponza/' + material.properties.map_Ks))
-					.texture('u_normal_map',   loadTexture('sponza/' + material.properties.map_norm));
-
-					var mesh = {
-						modelMatrix: mat4.create(),
-						drawCall: boxDrawCall
-					};
-					meshes.push(mesh);
-				}
-			});
-		});
-
-
-	});
 
 }
 
@@ -233,12 +289,20 @@ function render() {
 	picoTimer.start();
 	{
 		camera.update();
-		var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
 
-		// Clear screen
-		app.defaultDrawFramebuffer();
-		app.clear();
-		app.depthTest();
+		// Render shadow map (for the directional light) (if needed!)
+		renderShadowMap();
+
+		var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
+		var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
+		var shadowMap = shadowMapFramebuffer.depthTexture;
+
+		// Setup for rendering
+		app.defaultDrawFramebuffer()
+		.defaultViewport()
+		.depthTest()
+		.noBlend()
+		.clear();
 
 		// Render scene
 		for (var i = 0, len = meshes.length; i < len; ++i) {
@@ -251,9 +315,13 @@ function render() {
 			.uniform('u_projection_from_view', camera.projectionMatrix)
 			.uniform('u_dir_light_color', directionalLight.color)
 			.uniform('u_dir_light_view_direction', dirLightViewDirection)
+			.uniform('u_light_projection_from_world', lightViewProjection)
+			.texture('u_shadow_map', shadowMap)
 			.draw();
 
 		}
+
+		//renderTextureToScreen(shadowMap);
 
 		var renderDelta = new Date().getTime() - startStamp;
 		setTimeout( function() {
@@ -271,6 +339,78 @@ function render() {
 /*
 	requestAnimationFrame(render);
 */
+}
+
+function shadowMapNeedsRendering() {
+
+	var lastDirection = shadowMapNeedsRendering.lastDirection || vec3.create();
+	var lastMeshCount = shadowMapNeedsRendering.lastMeshCount || 0;
+
+	if (vec3.equals(lastDirection, directionalLight.direction) && lastMeshCount === meshes.length) {
+
+		return false;
+
+	} else {
+
+		shadowMapNeedsRendering.lastDirection = vec3.copy(lastDirection, directionalLight.direction);
+		shadowMapNeedsRendering.lastMeshCount = meshes.length;
+
+		return true;
+
+	}
+
+
+}
+
+function renderShadowMap() {
+
+	if (!directionalLight) return;
+	if (!shadowMapNeedsRendering()) return;
+
+	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
+
+	app.drawFramebuffer(shadowMapFramebuffer)
+	.viewport(0, 0, shadowMapSize, shadowMapSize)
+	.depthTest()
+	.noBlend()
+	.clear();
+
+	for (var i = 0, len = meshes.length; i < len; ++i) {
+
+		var mesh = meshes[i];
+
+		mesh.shadowMapDrawCall
+		.uniform('u_world_from_local', mesh.modelMatrix)
+		.uniform('u_light_projection_from_world', lightViewProjection)
+		.draw();
+
+	}
+
+}
+
+function renderTextureToScreen(texture) {
+
+	//
+	// NOTE:
+	//
+	//   This function can be really helpful for debugging!
+	//   Just call this whenever and you get the texture on
+	//   the screen (just make sure nothing is drawn on top)
+	//
+
+	if (!blitTextureDrawCall) {
+		return;
+	}
+
+	app.defaultDrawFramebuffer()
+	.defaultViewport()
+	.noDepthTest()
+	.noBlend();
+
+	blitTextureDrawCall
+	.texture('u_texture', texture)
+	.draw();
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
