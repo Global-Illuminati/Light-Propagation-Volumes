@@ -1,3 +1,8 @@
+#ifndef VOXELIZER_HPP
+#define VOXELIZER_HPP
+
+#include <vector>
+
 struct AABB {
 	vec3 min, max;
 };
@@ -28,7 +33,7 @@ ivec2 ceil2(vec2 v) {
 	return ivec2((int)ceil(v.x()), (int)ceil(v.y()));
 }
 
-#define VOXEL_RES 128
+#define VOXEL_RES 64//128
 struct VoxelScene {
 	uint8_t voxels[VOXEL_RES][VOXEL_RES][VOXEL_RES];
 	int voxel_res;
@@ -105,6 +110,19 @@ iAABB transform_to_voxelspace(AABB bounding_box, VoxelScene *data) {
 	return ret;
 }
 
+vec3 get_voxel_center(ivec3 voxel, VoxelScene *scene) {
+	vec3 voxel_scene_size = scene->scene_bounds.max - scene->scene_bounds.min;
+	vec3 voxel_size = voxel_scene_size / scene->voxel_res;
+	return vec3(voxel.x(), voxel.y(), voxel.z()).cwiseProduct(voxel_size) + scene->scene_bounds.min + voxel_size / 2.0;
+}
+
+
+void get_voxel_centers(std::vector<ivec3> voxels, VoxelScene *scene, std::vector<vec3> &voxel_centers) {
+	for (int i = 0; i < voxels.size(); i++) {
+		voxel_centers.push_back(get_voxel_center(voxels[i], scene));
+	}
+}
+
 #include "tri_aabb_intersection.h"
 bool is_colliding(ivec3 voxel, VoxelScene *scene, Triangle &triangle) {
 	vec3 voxel_scene_size = scene->scene_bounds.max - scene->scene_bounds.min;
@@ -146,7 +164,6 @@ void voxelize_scene(Mesh mesh, VoxelScene *data) {
 	printf("%d\n", num_set_voxels);
 }
 
-#include <vector>
 
 void maybe_enqueue_unchecked(VoxelScene *scene, std::vector<ivec3> &to_process, ivec3 value) {
 	if (scene->voxels[value.x()][value.y()][value.z()]) return;
@@ -165,7 +182,7 @@ bool maybe_enqueue(VoxelScene *scene, std::vector<ivec3> &to_process, ivec3 valu
 	return false;
 }
 
-void flood_fill_voxel_scene(VoxelScene *scene, std::vector<ivec3> &candidate_probes) {
+void flood_fill_voxel_scene(VoxelScene *scene, std::vector<ivec3> &candidate_probe_voxels) {
 
 	std::vector<ivec3> to_process;
 	to_process.reserve(scene->voxel_res*scene->voxel_res * 6);
@@ -196,9 +213,9 @@ void flood_fill_voxel_scene(VoxelScene *scene, std::vector<ivec3> &candidate_pro
 		for (int i = 0; i < 6; i++) {
 			add_to_probes |= maybe_enqueue(scene, to_process, current + neighbours[i]);
 		}
-		if (add_to_probes) candidate_probes.push_back(current);
+		if (add_to_probes) candidate_probe_voxels.push_back(current);
 	}
-	printf("num candidate candidate_probes = %d\n", candidate_probes.size());
+	printf("num candidate candidate_probe_voxels = %d\n", candidate_probe_voxels.size());
 }
 
 void write_voxel_data(VoxelScene *data, char *file_path) {
@@ -208,3 +225,5 @@ void write_voxel_data(VoxelScene *data, char *file_path) {
 	}
 	fclose(f);
 }
+
+#endif /* VOXELIZER_HPP */

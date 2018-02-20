@@ -1,4 +1,6 @@
 
+#define RHO_PROBES 7.0f
+
 #pragma warning(disable:4996)
 #include "stdafx.h"
 #include "string.h"
@@ -148,6 +150,7 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 	fclose(f);
 }
 #include "voxelizer.hpp"
+#include "probe_reducer.hpp"
 
 iAABB2 transform_to_pixel_space(AABB2 bounding_box, Atlas_Output_Mesh *mesh) {
 	iAABB2 ret;
@@ -306,7 +309,7 @@ int main(int argc, char * argv[]) {
 	input_mesh.face_array = faces;
 
 	Atlas_Output_Mesh *output_mesh =NULL;
-#if 1
+#if 0//1
 	{
 		// Generate Atlas_Output_Mesh.
 		Atlas_Options atlas_options;
@@ -338,7 +341,7 @@ int main(int argc, char * argv[]) {
 #endif
 	
 	static VoxelScene data;
-	{//voxelize
+	{//voxelize and generate probes
 		Mesh m;
 		m.num_verts = input_mesh.vertex_count;
 		m.num_indices = input_mesh.face_count * 3;
@@ -353,14 +356,21 @@ int main(int argc, char * argv[]) {
 		}
 		m.indices = indices;
 		voxelize_scene(m, &data);
-		std::vector<ivec3>probes;
-		flood_fill_voxel_scene(&data, probes);
+		std::vector<ivec3>probe_voxels;
+		flood_fill_voxel_scene(&data, probe_voxels);
 		write_voxel_data(&data, "../voxels.dat");
+		
+		std::vector<vec3>probes;
+		get_voxel_centers(probe_voxels, &data, probes);
+		reduce_probes(probes, &data, RHO_PROBES);
+		write_probe_data(probes, "../probes.dat");
+		printf("Probes saved to ../probes.dat");
+		
 	}
 
 	{
 		std::vector<vec3>receivers;
-		compute_receiver_locations(output_mesh, attr, receivers);
+		/////////////compute_receiver_locations(output_mesh, attr, receivers);
 
 	}
 

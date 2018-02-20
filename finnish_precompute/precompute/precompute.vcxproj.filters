@@ -13,6 +13,7 @@
     <ClInclude Include="tinyobj_loader_c.h" />
     <ClInclude Include="tri_aabb_intersection.h" />
     <ClInclude Include="voxelizer.hpp" />
+    <ClInclude Include="probe_reducer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
