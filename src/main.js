@@ -7,6 +7,7 @@ var gui;
 
 var settings = {
 	target_fps: 60,
+	environment_brightness: 1.5
 };
 
 var sceneSettings = {
@@ -21,6 +22,7 @@ var gpuTimePanel;
 var picoTimer;
 
 var blitTextureDrawCall;
+var environmentDrawCall;
 
 var sceneUniforms;
 
@@ -62,11 +64,14 @@ function checkWebGL2Compability() {
 
 function loadTexture(imageName, options) {
 
-	var options = options || {};
+	if (!options) {
 
-	options['minFilter'] = PicoGL.LINEAR_MIPMAP_NEAREST;
-	options['magFilter'] = PicoGL.LINEAR;
-	options['mipmaps'] = true;
+		var options = {};
+		options['minFilter'] = PicoGL.LINEAR_MIPMAP_NEAREST;
+		options['magFilter'] = PicoGL.LINEAR;
+		options['mipmaps'] = true;
+
+	}
 
 	var texture = app.createTexture2D(1, 1, options);
 	texture.data(new Uint8Array([200, 200, 200, 256]));
@@ -104,6 +109,7 @@ function init() {
 
 	gui = new dat.GUI();
 	gui.add(settings, 'target_fps', 0, 120);
+	gui.add(settings, 'environment_brightness', 0.0, 2.0);
 
 	//////////////////////////////////////
 	// Basic GL state
@@ -141,12 +147,19 @@ function init() {
 	shaderLoader.addShaderFile('scene_uniforms.glsl');
 	shaderLoader.addShaderFile('mesh_attributes.glsl');
 	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
+	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
 	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
 	shaderLoader.addShaderProgram('shadowMapping', 'shadow_mapping.vert.glsl', 'shadow_mapping.frag.glsl');
 	shaderLoader.load(function(data) {
 
+		var fullscreenVertexArray = createFullscreenVertexArray();
+
 		var textureBlitShader = makeShader('textureBlit', data);
-		setupTextureBlitDrawCall(textureBlitShader);
+		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
+
+		var environmentShader = makeShader('environment', data);
+		environmentDrawCall = app.createDrawCall(environmentShader, fullscreenVertexArray)
+		.texture('u_environment_map', loadTexture('environments/ocean.jpg', {}));
 
 		makeShader('default', data);
 		makeShader('shadowMapping', data);
@@ -184,12 +197,11 @@ function init() {
 			});
 		});
 
-
 	});
 
 }
 
-function setupTextureBlitDrawCall(shader) {
+function createFullscreenVertexArray() {
 
 	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, new Float32Array([
 		-1, -1, 0,
@@ -200,7 +212,7 @@ function setupTextureBlitDrawCall(shader) {
 	var vertexArray = app.createVertexArray()
 	.vertexAttributeBuffer(0, positions);
 
-	blitTextureDrawCall = app.createDrawCall(shader, vertexArray);
+	return vertexArray;
 
 }
 
@@ -301,6 +313,7 @@ function render() {
 		app.defaultDrawFramebuffer()
 		.defaultViewport()
 		.depthTest()
+		.depthFunc(PicoGL.LEQUAL)
 		.noBlend()
 		.clear();
 
@@ -321,12 +334,28 @@ function render() {
 
 		}
 
-		//renderTextureToScreen(shadowMap);
+		// Render environment
+		if (environmentDrawCall) {
 
-		var renderDelta = new Date().getTime() - startStamp;
-		setTimeout( function() {
-			requestAnimationFrame(render);
-		}, 1000 / settings.target_fps - renderDelta-1000/120);
+			app.defaultDrawFramebuffer()
+			.defaultViewport()
+			.depthTest()
+			.depthFunc(PicoGL.EQUAL)
+			.noBlend();
+
+			var inverseViewProj = mat4.create();
+			mat4.mul(inverseViewProj, camera.projectionMatrix, camera.viewMatrix);
+			mat4.invert(inverseViewProj, inverseViewProj);
+
+			environmentDrawCall
+			.uniform('u_camera_position', camera.position)
+			.uniform('u_world_from_projection', inverseViewProj)
+			.uniform('u_environment_brightness', settings.environment_brightness)
+			.draw();
+
+		}
+
+		//renderTextureToScreen(shadowMap);
 
 	}
 	picoTimer.end();
@@ -336,9 +365,13 @@ function render() {
 		gpuTimePanel.update(picoTimer.gpuTime, 35);
 	}
 
-/*
-	requestAnimationFrame(render);
-*/
+	//requestAnimationFrame(render);
+
+	var renderDelta = new Date().getTime() - startStamp;
+	setTimeout( function() {
+		requestAnimationFrame(render);
+	}, 1000 / settings.target_fps - renderDelta-1000/120);
+
 }
 
 function shadowMapNeedsRendering() {
@@ -372,6 +405,7 @@ function renderShadowMap() {
 	app.drawFramebuffer(shadowMapFramebuffer)
 	.viewport(0, 0, shadowMapSize, shadowMapSize)
 	.depthTest()
+	.depthFunc(PicoGL.LEQUAL)
 	.noBlend()
 	.clear();
 
