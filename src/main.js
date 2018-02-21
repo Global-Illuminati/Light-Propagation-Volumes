@@ -1,121 +1,450 @@
-
-// Add stats
-var stats = new Stats();
-
-document.body.appendChild(stats.dom);
-stats.showPanel(1); // (frame time)
-
-// Add GUI panel
-var gui = new dat.GUI();
-
-var settings = {
-	target_fps: 60,
-};
-
-var clock;
-var camera, controls, scene, renderer;
-
-window.addEventListener('resize', resize, false);
-
-init();
-render();
+'using strict';
 
 ////////////////////////////////////////////////////////////////////////////////
 
+var stats;
+var gui;
+
+var settings = {
+	target_fps: 60,
+	environment_brightness: 1.5
+};
+
+var sceneSettings = {
+	ambientColor: new Float32Array([0.15, 0.15, 0.15, 1.0]),
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+var app;
+
+var gpuTimePanel;
+var picoTimer;
+
+var blitTextureDrawCall;
+var environmentDrawCall;
+
+var sceneUniforms;
+
+var shadowMapSize = 4096;
+var shadowMapFramebuffer;
+
+var camera;
+var directionalLight;
+var meshes = [];
+
+window.addEventListener('DOMContentLoaded', function () {
+
+	init();
+	resize();
+
+	window.addEventListener('resize', resize, false);
+	requestAnimationFrame(render);
+
+}, false);
+
+////////////////////////////////////////////////////////////////////////////////
+// Utility
+
+function checkWebGL2Compability() {
+
+	var c = document.createElement('canvas');
+	var webgl2 = c.getContext('webgl2');
+	if (!webgl2) {
+		var message = document.createElement('p');
+		message.id = 'no-webgl2-error';
+		message.innerHTML = 'WebGL 2.0 doesn\'t seem to be supported in this browser and is required for this demo! ' +
+			'It should work on most modern desktop browsers though.';
+		canvas.parentNode.replaceChild(message, document.getElementById('canvas'));
+		return false;
+	}
+	return true;
+
+}
+
+function loadTexture(imageName, options) {
+
+	if (!options) {
+
+		var options = {};
+		options['minFilter'] = PicoGL.LINEAR_MIPMAP_NEAREST;
+		options['magFilter'] = PicoGL.LINEAR;
+		options['mipmaps'] = true;
+
+	}
+
+	var texture = app.createTexture2D(1, 1, options);
+	texture.data(new Uint8Array([200, 200, 200, 256]));
+
+	var image = document.createElement('img');
+	image.onload = function() {
+
+		texture.resize(image.width, image.height);
+		texture.data(image);
+
+	};
+	image.src = 'assets/' + imageName;
+	return texture;
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Initialization etc.
 
 function init() {
 
-	clock = new THREE.Clock();
+	if (!checkWebGL2Compability()) {
+		return;
+	}
 
-	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
-	camera.position.set(0, 2, 0);
+	var canvas = document.getElementById('canvas');
+	app = PicoGL.createApp(canvas, { antialias: true });
 
+	stats = new Stats();
+	stats.showPanel(1); // (frame time)
+	document.body.appendChild(stats.dom);
 
-	scene = new THREE.Scene();
+	gpuTimePanel = stats.addPanel(new Stats.Panel('MS (GPU)', '#ff8', '#221'));
+	picoTimer = app.createTimer();
 
-	var ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
-	scene.add(ambientLight);
+	gui = new dat.GUI();
+	gui.add(settings, 'target_fps', 0, 120);
+	gui.add(settings, 'environment_brightness', 0.0, 2.0);
 
-	light = new THREE.DirectionalLight(0xffffff, 0.5);
-	light.position.x = 20;
-	light.position.y = 60;
-	light.position.z = 10;
-	light.target = new THREE.Object3D();
-	light.castShadow = true;
-	light.shadow.mapSize.width = 2048;
-	light.shadow.mapSize.height = 2048;
-	light.shadow.camera.zoom = 0.15;
-	scene.add(light);
-	scene.add(light.target);
+	//////////////////////////////////////
+	// Basic GL state
 
-	scene.add(new THREE.DirectionalLightHelper(light));
-	scene.add(new THREE.CameraHelper(light.shadow.camera));
+	app.clearColor(0, 0, 0, 1);
+	app.cullBackfaces();
+	app.noBlend();
 
-	THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader() );
-	
-	var mtlLoader = new THREE.MTLLoader();
-	mtlLoader.setPath('assets/sponza/' );
-	mtlLoader.load('sponza.mtl', function( materials ) {
-		materials.preload();
+	//////////////////////////////////////
+	// Camera stuff
 
-		var objLoader = new THREE.OBJLoader();
-		objLoader.setMaterials( materials );
-		
+	var cameraPos = vec3.fromValues(-15, 3, 0);
+	var cameraRot = quat.fromEuler(quat.create(), 15, -90, 0);
+	camera = new Camera(cameraPos, cameraRot);
 
-		
-		objLoader.load( 'assets/sponza/sponza.obj_2xuv', function ( object ) {
-			object.castShadow = true;
-			object.receiveShadow = true;
-			object.traverse(function(child) {
-					child.castShadow = true;
-					child.receiveShadow = true;
+	//////////////////////////////////////
+	// Scene setup
+
+	directionalLight = new DirectionalLight();
+	setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
+
+	setupSceneUniforms();
+
+	var shaderPrograms = {};
+
+	function makeShader(name, data) {
+		var programData = data[name];
+		var program = app.createProgram(programData.vertexSource, programData.fragmentSource);
+		shaderPrograms[name] = program;
+		return program;
+	}
+
+	var shaderLoader = new ShaderLoader('src/shaders/');
+	shaderLoader.addShaderFile('common.glsl');
+	shaderLoader.addShaderFile('scene_uniforms.glsl');
+	shaderLoader.addShaderFile('mesh_attributes.glsl');
+	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
+	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
+	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
+	shaderLoader.addShaderProgram('shadowMapping', 'shadow_mapping.vert.glsl', 'shadow_mapping.frag.glsl');
+	shaderLoader.load(function(data) {
+
+		var fullscreenVertexArray = createFullscreenVertexArray();
+
+		var textureBlitShader = makeShader('textureBlit', data);
+		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
+
+		var environmentShader = makeShader('environment', data);
+		environmentDrawCall = app.createDrawCall(environmentShader, fullscreenVertexArray)
+		.texture('u_environment_map', loadTexture('environments/ocean.jpg', {}));
+
+		makeShader('default', data);
+		makeShader('shadowMapping', data);
+
+		var objLoader = new OBJLoader();
+		var mtlLoader = new MTLLoader();
+
+		objLoader.load('assets/sponza/sponza.obj_2xuv', function(objects) {
+			mtlLoader.load("assets/sponza/sponza.mtl",function(materials){
+				for (var i = 0; i < objects.length; ++i) {
+					var material = undefined;
+					for(var m = 0; m<materials.length;m++){
+						if(materials[m].name === objects[i].material){
+							material = materials[m];
+						}
+					}
+
+					var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
+
+					var drawCall = app.createDrawCall(shaderPrograms['default'], vertexArray)
+					.uniformBlock('SceneUniforms', sceneUniforms)
+					.texture('u_diffuse_map',  loadTexture('sponza/' + material.properties.map_Kd))
+					.texture('u_specular_map', loadTexture('sponza/' + material.properties.map_Ks))
+					.texture('u_normal_map',   loadTexture('sponza/' + material.properties.map_norm));
+
+					var shadowMappingDrawCall = app.createDrawCall(shaderPrograms['shadowMapping'], vertexArray);
+
+					var mesh = {
+						modelMatrix: mat4.create(),
+						drawCall: drawCall,
+						shadowMapDrawCall: shadowMappingDrawCall
+					};
+					meshes.push(mesh);
+				}
 			});
-		 scene.add( object );
 		});
+
 	});
 
+}
 
-	renderer = new THREE.WebGLRenderer({ antialias: true });
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-	document.body.appendChild(renderer.domElement);
+function createFullscreenVertexArray() {
 
-	controls = new THREE.FirstPersonControls(camera,renderer.domElement);
-	controls.movementSpeed = 2.2;
-	controls.lookSpeed = 0.25;
+	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, new Float32Array([
+		-1, -1, 0,
+		+3, -1, 0,
+		-1, +3, 0
+	]));
 
-	gui.add(settings, 'target_fps', 0, 120);
+	var vertexArray = app.createVertexArray()
+	.vertexAttributeBuffer(0, positions);
+
+	return vertexArray;
+
+}
+
+function setupDirectionalLightShadowMapFramebuffer(size) {
+
+	var colorBuffer = app.createTexture2D(size, size, {
+		format: PicoGL.RED,
+		internalFormat: PicoGL.R8,
+		minFilter: PicoGL.NEAREST,
+		magFilter: PicoGL.NEAREST
+	});
+
+	var depthBuffer = app.createTexture2D(size, size, {
+		format: PicoGL.DEPTH_COMPONENT
+	});
+
+	shadowMapFramebuffer = app.createFramebuffer()
+	.colorTarget(0, colorBuffer)
+	.depthTarget(depthBuffer);
+
+}
+
+function setupSceneUniforms() {
+
+	//
+	// TODO: Fix all this! I got some weird results when I tried all this before but it should work...
+	//
+
+	sceneUniforms = app.createUniformBuffer([
+		PicoGL.FLOAT_VEC4 /* 0 - ambient color */   //,
+		//PicoGL.FLOAT_VEC4 /* 1 - directional light color */,
+		//PicoGL.FLOAT_VEC4 /* 2 - directional light direction */,
+		//PicoGL.FLOAT_MAT4 /* 3 - view from world matrix */,
+		//PicoGL.FLOAT_MAT4 /* 4 - projection from view matrix */
+	])
+	.set(0, sceneSettings.ambientColor)
+	//.set(1, directionalLight.color)
+	//.set(2, directionalLight.direction)
+	//.set(3, camera.viewMatrix)
+	//.set(4, camera.projectionMatrix)
+	.update();
+
+/*
+	camera.onViewMatrixChange = function(newValue) {
+		sceneUniforms.set(3, newValue).update();
+	};
+
+	camera.onProjectionMatrixChange = function(newValue) {
+		sceneUniforms.set(4, newValue).update();
+	};
+*/
+
+}
+
+function createVertexArrayFromMeshInfo(meshInfo) {
+	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, meshInfo.positions);
+	var normals   = app.createVertexBuffer(PicoGL.FLOAT, 3, meshInfo.normals);
+	var texCoords = app.createVertexBuffer(PicoGL.FLOAT, 2, meshInfo.uvs);
+
+	var vertexArray = app.createVertexArray()
+	.vertexAttributeBuffer(0, positions)
+	.vertexAttributeBuffer(1, normals)
+	.vertexAttributeBuffer(2, texCoords);
+	return vertexArray;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 function resize() {
 
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
+	var w = window.innerWidth;
+	var h = window.innerHeight;
 
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	controls.handleResize();
+	app.resize(w, h);
+	camera.resize(w, h);
 
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
 function render() {
-	var start_stamp= new Date().getTime();
+	var startStamp = new Date().getTime();
+
 	stats.begin();
-	var delta = clock.getDelta();
-	controls.update(delta);
-	renderer.render(scene, camera);
+	picoTimer.start();
+	{
+		camera.update();
+
+		// Render shadow map (for the directional light) (if needed!)
+		renderShadowMap();
+
+		var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
+		var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
+		var shadowMap = shadowMapFramebuffer.depthTexture;
+
+		// Setup for rendering
+		app.defaultDrawFramebuffer()
+		.defaultViewport()
+		.depthTest()
+		.depthFunc(PicoGL.LEQUAL)
+		.noBlend()
+		.clear();
+
+		// Render scene
+		for (var i = 0, len = meshes.length; i < len; ++i) {
+
+			var mesh = meshes[i];
+
+			mesh.drawCall
+			.uniform('u_world_from_local', mesh.modelMatrix)
+			.uniform('u_view_from_world', camera.viewMatrix)
+			.uniform('u_projection_from_view', camera.projectionMatrix)
+			.uniform('u_dir_light_color', directionalLight.color)
+			.uniform('u_dir_light_view_direction', dirLightViewDirection)
+			.uniform('u_light_projection_from_world', lightViewProjection)
+			.texture('u_shadow_map', shadowMap)
+			.draw();
+
+		}
+
+		// Render environment
+		if (environmentDrawCall) {
+
+			app.defaultDrawFramebuffer()
+			.defaultViewport()
+			.depthTest()
+			.depthFunc(PicoGL.EQUAL)
+			.noBlend();
+
+			var inverseViewProj = mat4.create();
+			mat4.mul(inverseViewProj, camera.projectionMatrix, camera.viewMatrix);
+			mat4.invert(inverseViewProj, inverseViewProj);
+
+			environmentDrawCall
+			.uniform('u_camera_position', camera.position)
+			.uniform('u_world_from_projection', inverseViewProj)
+			.uniform('u_environment_brightness', settings.environment_brightness)
+			.draw();
+
+		}
+
+		//renderTextureToScreen(shadowMap);
+
+	}
+	picoTimer.end();
 	stats.end();
 
-	var render_delta = new Date().getTime()-start_stamp;
+	if (picoTimer.ready()) {
+		gpuTimePanel.update(picoTimer.gpuTime, 35);
+	}
+
+	//requestAnimationFrame(render);
+
+	var renderDelta = new Date().getTime() - startStamp;
 	setTimeout( function() {
-		requestAnimationFrame( render);
-	}, 1000 / settings.target_fps - render_delta-1000/120);	
-	
+		requestAnimationFrame(render);
+	}, 1000 / settings.target_fps - renderDelta-1000/120);
+
 }
 
+function shadowMapNeedsRendering() {
+
+	var lastDirection = shadowMapNeedsRendering.lastDirection || vec3.create();
+	var lastMeshCount = shadowMapNeedsRendering.lastMeshCount || 0;
+
+	if (vec3.equals(lastDirection, directionalLight.direction) && lastMeshCount === meshes.length) {
+
+		return false;
+
+	} else {
+
+		shadowMapNeedsRendering.lastDirection = vec3.copy(lastDirection, directionalLight.direction);
+		shadowMapNeedsRendering.lastMeshCount = meshes.length;
+
+		return true;
+
+	}
+
+
+}
+
+function renderShadowMap() {
+
+	if (!directionalLight) return;
+	if (!shadowMapNeedsRendering()) return;
+
+	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
+
+	app.drawFramebuffer(shadowMapFramebuffer)
+	.viewport(0, 0, shadowMapSize, shadowMapSize)
+	.depthTest()
+	.depthFunc(PicoGL.LEQUAL)
+	.noBlend()
+	.clear();
+
+	for (var i = 0, len = meshes.length; i < len; ++i) {
+
+		var mesh = meshes[i];
+
+		mesh.shadowMapDrawCall
+		.uniform('u_world_from_local', mesh.modelMatrix)
+		.uniform('u_light_projection_from_world', lightViewProjection)
+		.draw();
+
+	}
+
+}
+
+function renderTextureToScreen(texture) {
+
+	//
+	// NOTE:
+	//
+	//   This function can be really helpful for debugging!
+	//   Just call this whenever and you get the texture on
+	//   the screen (just make sure nothing is drawn on top)
+	//
+
+	if (!blitTextureDrawCall) {
+		return;
+	}
+
+	app.defaultDrawFramebuffer()
+	.defaultViewport()
+	.noDepthTest()
+	.noBlend();
+
+	blitTextureDrawCall
+	.texture('u_texture', texture)
+	.draw();
+
+}
 
 ////////////////////////////////////////////////////////////////////////////////

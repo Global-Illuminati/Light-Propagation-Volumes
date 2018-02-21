@@ -12,14 +12,23 @@
 		</style>
 	</head>
 	<body>
-		<!-- canvas inserted by three.js -->
-		<script src="deps/three.js" charset="utf-8"></script>
-		<script src="deps/FirstPersonControls.js" charset="utf-8"></script>
+		<canvas id="canvas"></canvas>
+
+		<!-- core -->
+		<script src="deps/picogl.js" charset="utf-8"></script>
+		<script src="deps/gl-matrix.js" charset="utf-8"></script>
+
+		<!-- asset loading -->
+		<script src="deps/OBJLoader.js" charset="utf-8"></script>
+		<script src="deps/MTLLoaderNEW.js" charset="utf-8"></script>
+
+		<!-- stats & gui -->
 		<script src="deps/stats.min.js" charset="utf-8"></script>
 		<script src="deps/dat.gui.min.js" charset="utf-8"></script>
-		<script src="deps/OBJLoader.js" charset="utf-8"></script>
-		<script src="deps/DDSLoader.js" charset="utf-8"></script>
-		<script src="deps/MTLLoader.js" charset="utf-8"></script>
+
+		<script src="src/Camera.js" charset="utf-8"></script>
+		<script src="src/ShaderLoader.js" charset="utf-8"></script>
+		<script src="src/DirectionalLight.js" charset="utf-8"></script>
 		<script src="src/main.js" charset="utf-8"></script>
 	</body>
 </html>
