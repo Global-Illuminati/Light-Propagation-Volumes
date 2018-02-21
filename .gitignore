@@ -9,3 +9,6 @@
 **/ipch/*
 *.opendb
 *.TMP
+
+# Webstorm
+.idea/
