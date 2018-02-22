@@ -392,75 +392,16 @@ function render() {
 	{
 		camera.update();
 
-		// Render shadow map (for the directional light) (if needed!)
 		renderShadowMap();
+		renderScene();
 
-		var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
-		var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
-		var shadowMap = shadowMapFramebuffer.depthTexture;
+		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
+		renderProbes(viewProjection);
 
-		// Setup for rendering
-		app.defaultDrawFramebuffer()
-		.defaultViewport()
-		.depthTest()
-		.depthFunc(PicoGL.LEQUAL)
-		.noBlend()
-		.clear();
+		var inverseViewProjection = mat4.invert(mat4.create(), viewProjection);
+		renderEnvironment(inverseViewProjection)
 
-		// Render scene
-		for (var i = 0, len = meshes.length; i < len; ++i) {
-
-			var mesh = meshes[i];
-
-			mesh.drawCall
-			.uniform('u_world_from_local', mesh.modelMatrix)
-			.uniform('u_view_from_world', camera.viewMatrix)
-			.uniform('u_projection_from_view', camera.projectionMatrix)
-			.uniform('u_dir_light_color', directionalLight.color)
-			.uniform('u_dir_light_view_direction', dirLightViewDirection)
-			.uniform('u_light_projection_from_world', lightViewProjection)
-			.texture('u_shadow_map', shadowMap)
-			.draw();
-
-		}
-
-		var viewProjection = mat4.create();
-		var inverseViewProj = mat4.create();
-		mat4.mul(viewProjection, camera.projectionMatrix, camera.viewMatrix);
-		mat4.invert(inverseViewProj, viewProjection);
-
-		// Render probes
-		if (probeDrawCall) {
-
-			app.defaultDrawFramebuffer()
-			.defaultViewport()
-			.depthTest()
-			.depthFunc(PicoGL.LEQUAL)
-			.noBlend();
-
-			probeDrawCall
-			.uniform('u_projection_from_world', viewProjection)
-			.draw();
-
-		}
-
-		// Render environment
-		if (environmentDrawCall) {
-
-			app.defaultDrawFramebuffer()
-			.defaultViewport()
-			.depthTest()
-			.depthFunc(PicoGL.EQUAL)
-			.noBlend();
-
-			environmentDrawCall
-			.uniform('u_camera_position', camera.position)
-			.uniform('u_world_from_projection', inverseViewProj)
-			.uniform('u_environment_brightness', settings.environment_brightness)
-			.draw();
-
-		}
-
+		// Call this to get a debug render of the passed in texture
 		//renderTextureToScreen(shadowMap);
 
 	}
@@ -522,6 +463,75 @@ function renderShadowMap() {
 		mesh.shadowMapDrawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_light_projection_from_world', lightViewProjection)
+		.draw();
+
+	}
+
+}
+
+function renderScene() {
+
+	var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
+	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
+	var shadowMap = shadowMapFramebuffer.depthTexture;
+
+	app.defaultDrawFramebuffer()
+	.defaultViewport()
+	.depthTest()
+	.depthFunc(PicoGL.LEQUAL)
+	.noBlend()
+	.clear();
+
+	for (var i = 0, len = meshes.length; i < len; ++i) {
+
+		var mesh = meshes[i];
+
+		mesh.drawCall
+		.uniform('u_world_from_local', mesh.modelMatrix)
+		.uniform('u_view_from_world', camera.viewMatrix)
+		.uniform('u_projection_from_view', camera.projectionMatrix)
+		.uniform('u_dir_light_color', directionalLight.color)
+		.uniform('u_dir_light_view_direction', dirLightViewDirection)
+		.uniform('u_light_projection_from_world', lightViewProjection)
+		.texture('u_shadow_map', shadowMap)
+		.draw();
+
+	}
+
+}
+
+function renderProbes(viewProjection) {
+
+	if (probeDrawCall) {
+
+		app.defaultDrawFramebuffer()
+		.defaultViewport()
+		.depthTest()
+		.depthFunc(PicoGL.LEQUAL)
+		.noBlend();
+
+		probeDrawCall
+		.uniform('u_projection_from_world', viewProjection)
+		.draw();
+
+	}
+
+}
+
+function renderEnvironment(inverseViewProjection) {
+
+	if (environmentDrawCall) {
+
+		app.defaultDrawFramebuffer()
+		.defaultViewport()
+		.depthTest()
+		.depthFunc(PicoGL.EQUAL)
+		.noBlend();
+
+		environmentDrawCall
+		.uniform('u_camera_position', camera.position)
+		.uniform('u_world_from_projection', inverseViewProjection)
+		.uniform('u_environment_brightness', settings.environment_brightness)
 		.draw();
 
 	}
