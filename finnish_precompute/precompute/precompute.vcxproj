@@ -157,6 +157,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="local_transport.hpp" />
     <ClInclude Include="probe_reducer.hpp" />
     <ClInclude Include="ray_tracer.hpp" />
     <ClInclude Include="stdafx.h" />

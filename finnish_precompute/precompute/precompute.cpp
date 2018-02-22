@@ -153,6 +153,7 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 #include "probe_reducer.hpp"
 #include "ray_tracer.hpp"
 #include "google_spherical_harmonics\spherical_harmonics.h"
+#include "local_transport.hpp"
 
 iAABB2 transform_to_pixel_space(AABB2 bounding_box, Atlas_Output_Mesh *mesh) {
 	iAABB2 ret;
@@ -233,7 +234,7 @@ void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, 
 
 
 int main(int argc, char * argv[]) {
-
+	
 
 	tinyobj_attrib_t attr;
 	tinyobj_shape_t* shapes = NULL;

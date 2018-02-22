@@ -176,13 +176,14 @@ int find_closest_tri(Ray ray, Mesh mesh, vec3 *_out_hit = 0)
 	return closest_tri;
 }
 
-bool see_same_point(Ray a, vec3 p, Mesh mesh) {
+bool see_same_point(Ray a, vec3 p, Mesh mesh, vec3 *psi_dir) {
 
 	vec3 hit;
 	int closest_tri_a = find_closest_tri(a, mesh, &hit);
 	Ray b = { p, hit - b.origin }; // note dir does not have to be normalized!
 	int closest_tri_b = find_closest_tri(b, mesh);
 
+	*psi_dir = b.dir;
 	// @Robustness
 	// this has probably got some problems if we hit the edge of a tri
 	// and numerical errors make one ray hit one tri and the other the other.
@@ -191,7 +192,6 @@ bool see_same_point(Ray a, vec3 p, Mesh mesh) {
 	// since we know that if we hit the right triangle the position is also the same, down to numerial errors.
 	// by definition of the second ray.
 	// Daniel 22 Feb 2018
-
 	return (closest_tri_b == closest_tri_a);
 }
 
