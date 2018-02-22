@@ -14,7 +14,7 @@ using namespace Thekla;
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include "tinyobj_loader_c.h"
 #include "stdint.h"
-#include "math.h";
+#include "math.h"
 
 //#define eigen_assert(x) do{if(!(x)){printf(#x);__debugbreak();}}while(0)
 #include "Eigen\Dense"
@@ -139,7 +139,7 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 			tinyobj_shape_t shape = shapes[shape_idx];
 			fprintf(f, "o %s\n", shape.name);
 			fprintf(f, "usemtl %s\n", shape.material_name);
-			fprintf(f, "s off\n", shape.name); // probably not needed.
+			fprintf(f, "s off\n"); // probably not needed.
 		}
 
 		fprintf(f, "f %d/%d//%d %d/%d//%d %d/%d//%d\n",
@@ -152,6 +152,7 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 #include "voxelizer.hpp"
 #include "probe_reducer.hpp"
 #include "ray_tracer.hpp"
+#include "google_spherical_harmonics\spherical_harmonics.h"
 
 iAABB2 transform_to_pixel_space(AABB2 bounding_box, Atlas_Output_Mesh *mesh) {
 	iAABB2 ret;
@@ -174,7 +175,7 @@ vec3 compute_barycentric_coords(vec2 p, Triangle2 &tri) {
 	vec2 v0 = tri.b - tri.a;
 	vec2 v1 = tri.c - tri.a;
 	vec2 v2 = p - tri.a;
-	float inv_denom = 1.0/(v0.x() * v1.y() - v1.x() * v0.y());
+	float inv_denom = 1.0f/(v0.x() * v1.y() - v1.x() * v0.y());
 	float v = (v2.x() * v1.y() - v1.x() * v2.y()) * inv_denom;
 	float w = (v0.x() * v2.y() - v2.x() * v0.y()) * inv_denom;
 	float u = 1.0f - v - w;

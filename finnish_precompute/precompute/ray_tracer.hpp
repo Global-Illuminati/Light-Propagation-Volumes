@@ -43,12 +43,11 @@ struct InternalRay {
 	// the direction is implicitly encoded in shear + permutation
 	// after shear and permutation is applied the dir will be (0,0,1)
 	// so the dir doesn't need to be accessed.
-	struct {
-		// shear applied make ray.dir = (0,0,1)
-		vec3 shear;
-		// permuation so that ray.dir.z is larger than x,y 
-		ivec3 permutation;
-	};
+	// shear applied make ray.dir = (0,0,1)
+	vec3 shear;
+	// permuation so that ray.dir.z is larger than x,y 
+	ivec3 permutation;
+
 	float t_max;
 };
 
@@ -66,23 +65,22 @@ vec3 permute(vec3 v, ivec3 permutation) {
 	return vec3(v[permutation.x()], v[permutation.y()], v[permutation.z()]);
 }
 
-InternalRay &make_internal_ray(Ray ray) {
-	InternalRay ret;
+InternalRay make_internal_ray(Ray ray) {
 	ivec3 permutation;
 	// permute so that z is the largest dimension
 	permutation.z() = max_dimension(ray.dir);
 	permutation.x() = permutation.z() + 1; if (permutation.x() == 3) permutation.x() = 0;
 	permutation.y() = permutation.x() + 1; if (permutation.y() == 3) permutation.y() = 0;
-	ret.permutation = permutation;
-	ret.origin = ray.origin;
+	
 	ray.dir = permute(ray.dir, permutation);
+	
 	// shear so that ray.dir -> (0,0,1)
-	ret.shear = vec3(
+	vec3 shear(
 		-ray.dir.x() / ray.dir.z(),
 		-ray.dir.y() / ray.dir.z(),
 		1.0f / ray.dir.z());
-	ret.t_max = FLT_MAX;
-	return ret;
+	
+	return {ray.origin,shear, permutation, FLT_MAX};
 }
 
 struct HitInfo {
@@ -153,7 +151,7 @@ bool intersect(InternalRay &ray, const Triangle &t, HitInfo *hit_info) {
 
 int find_closest_tri(Ray ray, Mesh mesh, vec3 *_out_hit = 0)
 {
-	int closest_tri_a = -1;
+	int closest_tri = -1;
 	vec3 hit;
 	InternalRay &i_ray = make_internal_ray(ray);
 	// find closest intersection of a and the mesh
@@ -170,11 +168,12 @@ int find_closest_tri(Ray ray, Mesh mesh, vec3 *_out_hit = 0)
 			// feels bad to put this in the intersect method. But we will probably always do this so donno
 			i_ray.t_max = max(i_ray.t_max, hit_info.t);
 			
-			closest_tri_a = tri_index;
+			closest_tri = tri_index;
 			hit = hit_info.pos;
 		}
 	}
 	if (_out_hit) *_out_hit = hit;
+	return closest_tri;
 }
 
 bool see_same_point(Ray a, vec3 p, Mesh mesh) {
@@ -193,8 +192,7 @@ bool see_same_point(Ray a, vec3 p, Mesh mesh) {
 	// by definition of the second ray.
 	// Daniel 22 Feb 2018
 
-	if (closest_tri_b == closest_tri_a)
-		return true;
+	return (closest_tri_b == closest_tri_a);
 }
 
 

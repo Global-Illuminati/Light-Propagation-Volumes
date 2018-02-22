@@ -112,7 +112,7 @@ iAABB transform_to_voxelspace(AABB bounding_box, VoxelScene *data) {
 
 vec3 get_voxel_center(ivec3 voxel, VoxelScene *scene) {
 	vec3 voxel_scene_size = scene->scene_bounds.max - scene->scene_bounds.min;
-	vec3 voxel_size = voxel_scene_size / scene->voxel_res;
+	vec3 voxel_size = voxel_scene_size / (float)scene->voxel_res;
 	return vec3(voxel.x(), voxel.y(), voxel.z()).cwiseProduct(voxel_size) + scene->scene_bounds.min + voxel_size / 2.0;
 }
 
