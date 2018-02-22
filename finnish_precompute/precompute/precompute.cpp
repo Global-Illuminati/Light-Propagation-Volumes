@@ -151,6 +151,7 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 }
 #include "voxelizer.hpp"
 #include "probe_reducer.hpp"
+#include "ray_tracer.hpp"
 
 iAABB2 transform_to_pixel_space(AABB2 bounding_box, Atlas_Output_Mesh *mesh) {
 	iAABB2 ret;
@@ -224,6 +225,10 @@ void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, 
 // @NOTE might consider changing back to the c++ version and modify it so that it's not soooooo sloooow cause c version seems a bit unstable...
 // or fix c-version cause I like the structure better... might be fine now though just maybe support multiple materials... maybe...
 // Daniel, 11 Feb 2018 
+
+
+
+
 
 
 int main(int argc, char * argv[]) {

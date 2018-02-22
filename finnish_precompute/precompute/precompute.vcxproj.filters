@@ -14,6 +14,7 @@
     <ClInclude Include="tri_aabb_intersection.h" />
     <ClInclude Include="voxelizer.hpp" />
     <ClInclude Include="probe_reducer.hpp" />
+    <ClInclude Include="ray_tracer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
