@@ -155,12 +155,16 @@ int find_closest_tri(Ray ray, Mesh mesh, vec3 *_out_hit = 0)
 	vec3 hit;
 	InternalRay &i_ray = make_internal_ray(ray);
 	// find closest intersection of a and the mesh
-	for (int tri_index = 0; tri_index = mesh.num_indices / 3; tri_index++) {
+	for (int tri_index = 0; tri_index < mesh.num_indices / 3; tri_index++) {
+		int ia = mesh.indices[tri_index * 3 + 0];
+		int ib = mesh.indices[tri_index * 3 + 1];
+		int ic = mesh.indices[tri_index * 3 + 2];
+
 		Triangle t =
 		{
-			mesh.verts[tri_index * 3 + 0],
-			mesh.verts[tri_index * 3 + 1],
-			mesh.verts[tri_index * 3 + 2]
+			mesh.verts[ia],
+			mesh.verts[ib],
+			mesh.verts[ic]
 		};
 
 		HitInfo hit_info;
@@ -171,6 +175,7 @@ int find_closest_tri(Ray ray, Mesh mesh, vec3 *_out_hit = 0)
 			closest_tri = tri_index;
 			hit = hit_info.pos;
 		}
+
 	}
 	if (_out_hit) *_out_hit = hit;
 	return closest_tri;

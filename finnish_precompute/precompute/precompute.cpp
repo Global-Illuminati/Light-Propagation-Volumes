@@ -189,6 +189,7 @@ struct Receiver {
 
 void compute_receiver_locations(Atlas_Output_Mesh *light_map_mesh, Mesh mesh, std::vector<Receiver> &receivers) {
 
+	printf("computing receiver locations\n");
 	static uint8_t pixel_is_processed[1024][1024];
 	for (int face_idx = 0; face_idx < light_map_mesh->index_count / 3; face_idx++) {
 		auto new_a_idx = light_map_mesh->index_array[face_idx * 3 + 0];
@@ -231,6 +232,7 @@ void compute_receiver_locations(Atlas_Output_Mesh *light_map_mesh, Mesh mesh, st
 			}
 		}
 	}
+	printf("got %d receivers\n",receivers.size());
 }
 
 void generate_normals(Mesh *mesh) {
@@ -272,13 +274,6 @@ void generate_normals(Mesh *mesh) {
 // or fix c-version cause I like the structure better... might be fine now though just maybe support multiple materials... maybe...
 // Daniel, 11 Feb 2018 
 
-
-
-void free_mesh(Mesh *m) {
-	free(m->indices);
-	free(m->verts);
-	free(m->normals);
-}
 
 #include "local_transport.hpp"
 
@@ -367,7 +362,7 @@ int main(int argc, char * argv[]) {
 	input_mesh.face_array = faces;
 
 	Atlas_Output_Mesh *output_mesh =NULL;
-#if 0//1
+#if 1
 	{
 		// Generate Atlas_Output_Mesh.
 		Atlas_Options atlas_options;
@@ -414,13 +409,13 @@ int main(int argc, char * argv[]) {
 		m.indices = indices;
 		generate_normals(&m);
 	}
+	std::vector<vec3>probes;
 	{//voxelize and generate probes
 		voxelize_scene(m, &data);
 		std::vector<ivec3>probe_voxels;
 		flood_fill_voxel_scene(&data, probe_voxels);
 		write_voxel_data(&data, "../voxels.dat");
 		
-		std::vector<vec3>probes;
 		get_voxel_centers(probe_voxels, &data, probes);
 		reduce_probes(probes, &data, RHO_PROBES);
 		write_probe_data(probes, "../probes.dat");
@@ -429,12 +424,15 @@ int main(int argc, char * argv[]) {
 	}
 	std::vector<Receiver>receivers;
 
-	{
+	{ // generate receivers
 		compute_receiver_locations(output_mesh, m, receivers);
 	}
-	{
 
+	{ // compute local transport
+		compute_alpha(receivers, probes, m, RHO_PROBES);
 	}
+
+	
 
 
 	// Free stuff
@@ -444,6 +442,5 @@ int main(int argc, char * argv[]) {
 	tinyobj_attrib_free(&attr);
 	tinyobj_shapes_free(shapes, num_shapes);
 	tinyobj_materials_free(materials, num_materials);
-	free_mesh(&m);
 	return 0;
 }
