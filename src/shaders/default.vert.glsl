@@ -10,6 +10,8 @@ uniform mat4 u_light_projection_from_world;
 
 out vec3 v_position;
 out vec3 v_normal;
+out vec3 v_tangent;
+out vec3 v_bitangent;
 out vec2 v_tex_coord;
 out vec4 v_light_space_position;
 
@@ -20,9 +22,13 @@ void main()
 	// NOTE: normal only works for uniformly scaled objects!
 	vec4 view_space_position = view_from_local * vec4(a_position, 1.0);
 	vec4 view_space_normal   = view_from_local * vec4(a_normal, 0.0);
+	vec4 view_space_tangent   = view_from_local * vec4(a_tangent.xyz, 0.0);
 
 	v_position  = vec3(view_space_position);
 	v_normal    = vec3(view_space_normal);
+	v_tangent    = vec3(view_space_tangent);
+	v_bitangent  = vec3(a_tangent.w * cross(view_space_normal.xyz,view_space_tangent.xyz));
+	
 	v_tex_coord = a_tex_coord;
 
 	// TODO: Clean up these these transformations into one matrix multiplication

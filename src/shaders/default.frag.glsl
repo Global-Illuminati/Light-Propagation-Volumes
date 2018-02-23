@@ -9,6 +9,8 @@ precision highp float;
 
 in vec3 v_position;
 in vec3 v_normal;
+in vec3 v_tangent;
+in vec3 v_bitangent;
 in vec2 v_tex_coord;
 in vec4 v_light_space_position;
 
@@ -27,6 +29,8 @@ layout(location = 0) out vec4 o_color;
 void main()
 {
 	vec3 N = normalize(v_normal);
+	vec3 T = normalize(v_tangent);
+	vec3 B = normalize(v_bitangent);
 
 	vec3 diffuse  = texture(u_diffuse_map, v_tex_coord).rgb;
 	float shininess = texture(u_specular_map, v_tex_coord).r;
@@ -66,4 +70,7 @@ void main()
 	}
 
 	o_color = vec4(color, 1.0);
+	
+	o_color = vec4(color, 1.0) * vec4(0.001) + vec4(N * vec3(0.5) + vec3(0.5), 1.0);
+	
 }

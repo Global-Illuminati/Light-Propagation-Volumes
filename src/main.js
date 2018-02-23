@@ -180,7 +180,7 @@ function init() {
 		var objLoader = new OBJLoader();
 		var mtlLoader = new MTLLoader();
 
-		objLoader.load('assets/sponza/sponza.obj_2xuv', function(objects) {
+		objLoader.load('assets/sponza/sponza.obj', function(objects) {
 			mtlLoader.load("assets/sponza/sponza.mtl",function(materials){
 				for (var i = 0; i < objects.length; ++i) {
 					var material = undefined;
@@ -340,11 +340,13 @@ function createVertexArrayFromMeshInfo(meshInfo) {
 	var positions = app.createVertexBuffer(PicoGL.FLOAT, 3, meshInfo.positions);
 	var normals   = app.createVertexBuffer(PicoGL.FLOAT, 3, meshInfo.normals);
 	var texCoords = app.createVertexBuffer(PicoGL.FLOAT, 2, meshInfo.uvs);
+	var tangents = app.createVertexBuffer(PicoGL.FLOAT,  4, meshInfo.tangents);
 
 	var vertexArray = app.createVertexArray()
 	.vertexAttributeBuffer(0, positions)
 	.vertexAttributeBuffer(1, normals)
-	.vertexAttributeBuffer(2, texCoords);
+	.vertexAttributeBuffer(2, texCoords)
+	.vertexAttributeBuffer(3, tangents);
 	return vertexArray;
 }
 

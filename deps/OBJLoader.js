@@ -779,6 +779,10 @@ OBJLoader.prototype = {
             w1 = vec2.create();
             w2 = vec2.create();
             w3 = vec2.create();
+            
+            sdir = vec3.create();
+            tdir = vec3.create();
+
             for (var i = 0; i < num_objects; i++) {
                 var geometry = state.objects[i].geometry;
                 for(var j = 0;j < geometry.vertex_indices.length;j+=3)
@@ -825,11 +829,11 @@ OBJLoader.prototype = {
                         var t2 = w3[1] - w1[1];
                         
                         var r = 1.0 / (s1 * t2 - s2 * t1);
-                        var sdir = vec3.fromValues((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-                                (t2 * z1 - t1 * z2) * r);
-                        var tdir = vec3.fromValues((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-                                (s1 * z2 - s2 * z1) * r);
-                  
+                        vec3.set(sdir,(t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+                        (t2 * z1 - t1 * z2) * r);
+                        vec3.set(tdir,(s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+                        (s1 * z2 - s2 * z1) * r);
+
 
                         tmp_tangents[ia + 0]+=sdir[0];
                         tmp_tangents[ia + 1]+=sdir[1];
@@ -872,7 +876,7 @@ OBJLoader.prototype = {
                 t[0]  = tmp_tangents[i];   t[1]  = tmp_tangents[i+1];   t[2]  = tmp_tangents[i+2];   
                 t2[0] = tmp_bitangents[i]; t2[1] = tmp_bitangents[i+1]; t2[2] = tmp_bitangents[i+2]; 
 
-                
+
                 // Gram-Schmidt orthogonalize
                 // t = (t - n * Dot(n, t)).Normalize();
                 // var w = (Dot(Cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;
@@ -921,41 +925,11 @@ OBJLoader.prototype = {
             // var normals_out =[(3 * geometry.vertices.length)];
             var normals_out =new Float32Array(3 * geometry.vertex_indices.length);
 
-            var tangents_out = new Float32Array(3*geometry.vertex_indices.length);
+            var tangents_out = new Float32Array(4*geometry.vertex_indices.length);
             var uvs_out = new Float32Array(2 * geometry.vertex_indices.length);
             if(geometry.vertex_indices.length != geometry.uv_indices.length) console.error('must provide uvs for all faces!');
             var num_tris = geometry.vertex_indices.length/3;
-            for(var j = 0; j<num_tris;j++)
-            {
-                var verts_in = state.vertices;
-                var normals_in = tmp_normals;
-                var indices =  geometry.vertex_indices;
-
-                var ia = indices[j*3 + 0];
-                var ib = indices[j*3 + 1];
-                var ic = indices[j*3 + 2];
-
-                verts_out[j*9 + 0]=verts_in[ia+0];
-                verts_out[j*9 + 1]=verts_in[ia+1];
-                verts_out[j*9 + 2]=verts_in[ia+2];
-                verts_out[j*9 + 3]=verts_in[ib+0];
-                verts_out[j*9 + 4]=verts_in[ib+1];
-                verts_out[j*9 + 5]=verts_in[ib+2];
-                verts_out[j*9 + 6]=verts_in[ic+0];
-                verts_out[j*9 + 7]=verts_in[ic+1];
-                verts_out[j*9 + 8]=verts_in[ic+2];
-
-                normals_out[j*9 + 0]=normals_in[ia+0]; 
-                normals_out[j*9 + 1]=normals_in[ia+1];
-                normals_out[j*9 + 2]=normals_in[ia+2];
-                normals_out[j*9 + 3]=normals_in[ib+0];
-                normals_out[j*9 + 4]=normals_in[ib+1];
-                normals_out[j*9 + 5]=normals_in[ib+2];
-                normals_out[j*9 + 6]=normals_in[ic+0];
-                normals_out[j*9 + 7]=normals_in[ic+1];
-                normals_out[j*9 + 8]=normals_in[ic+2];
-            }
-
+          
             for(var j = 0; j<num_tris;j++)
             {
                 var verts_in = state.vertices;
@@ -988,15 +962,18 @@ OBJLoader.prototype = {
                     normals_out[j*9 + 7]=normals_in[ic+1];
                     normals_out[j*9 + 8]=normals_in[ic+2];
 
-                    tangents_out[j*9 + 0]=tangents_in[ia+0]; 
-                    tangents_out[j*9 + 1]=tangents_in[ia+1];
-                    tangents_out[j*9 + 2]=tangents_in[ia+2];
-                    tangents_out[j*9 + 3]=tangents_in[ib+0];
-                    tangents_out[j*9 + 4]=tangents_in[ib+1];
-                    tangents_out[j*9 + 5]=tangents_in[ib+2];
-                    tangents_out[j*9 + 6]=tangents_in[ic+0];
-                    tangents_out[j*9 + 7]=tangents_in[ic+1];
-                    tangents_out[j*9 + 8]=tangents_in[ic+2];
+                    tangents_out[j*12 + 0]=tangents_in[ia/3*4+0]; 
+                    tangents_out[j*12 + 1]=tangents_in[ia/3*4+1];
+                    tangents_out[j*12 + 2]=tangents_in[ia/3*4+2];
+                    tangents_out[j*12 + 3]=tangents_in[ia/3*4+3];
+                    tangents_out[j*12 + 4]=tangents_in[ib/3*4+0];
+                    tangents_out[j*12 + 5]=tangents_in[ib/3*4+1];
+                    tangents_out[j*12 + 6]=tangents_in[ib/3*4+2];
+                    tangents_out[j*12 + 7]=tangents_in[ib/3*4+3];
+                    tangents_out[j*12 + 8]=tangents_in[ic/3*4+0];
+                    tangents_out[j*12 + 9]=tangents_in[ic/3*4+1];
+                    tangents_out[j*12 + 10]=tangents_in[ic/3*4+2];
+                    tangents_out[j*12 + 11]=tangents_in[ic/3*4+3];
                 }
                 {
                     var indices =  geometry.uv_indices;
@@ -1014,8 +991,6 @@ OBJLoader.prototype = {
             }
                 
             var material = {};
-            
-           
             
             container.push(
                 {
