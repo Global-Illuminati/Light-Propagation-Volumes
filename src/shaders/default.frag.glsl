@@ -71,6 +71,7 @@ void main()
 
 	o_color = vec4(color, 1.0);
 	
-	o_color = vec4(color, 1.0) * vec4(0.001) + vec4(N * vec3(0.5) + vec3(0.5), 1.0);
+	// output tangents
+	//o_color = vec4(color, 1.0) * vec4(0.001) + vec4(T * vec3(0.5) + vec3(0.5), 1.0);
 	
 }
