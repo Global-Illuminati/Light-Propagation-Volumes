@@ -47,6 +47,8 @@ struct Mesh {
 	int num_verts;
 	int *indices;
 	int num_indices;
+
+	vec3 *normals;
 };
 
 struct Interval {

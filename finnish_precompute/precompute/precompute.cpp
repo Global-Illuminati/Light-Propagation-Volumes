@@ -153,7 +153,6 @@ void write_obj(tinyobj_attrib_t attr, tinyobj_shape_t *shapes, size_t num_shapes
 #include "probe_reducer.hpp"
 #include "ray_tracer.hpp"
 #include "google_spherical_harmonics\spherical_harmonics.h"
-#include "local_transport.hpp"
 
 iAABB2 transform_to_pixel_space(AABB2 bounding_box, Atlas_Output_Mesh *mesh) {
 	iAABB2 ret;
@@ -183,24 +182,40 @@ vec3 compute_barycentric_coords(vec2 p, Triangle2 &tri) {
 	return vec3(u, v, w);
 }
 
-void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, std::vector<vec3> &receivers) {
+struct Receiver {
+	vec3 pos;
+	vec3 norm;
+};
 
-	static uint8_t pixel_is_processed[2048][2048];
-	for (int face_idx = 0; face_idx < mesh->index_count / 3; face_idx++) {
-		auto new_a_idx = mesh->index_array[face_idx * 3 + 0];
-		auto new_b_idx = mesh->index_array[face_idx * 3 + 1];
-		auto new_c_idx = mesh->index_array[face_idx * 3 + 2];
-		vec3 vert_a = Eigen::Map<vec3>(&attr.vertices[mesh->vertex_array[new_a_idx].xref * 3]);
-		vec3 vert_b = Eigen::Map<vec3>(&attr.vertices[mesh->vertex_array[new_b_idx].xref * 3]);
-		vec3 vert_c = Eigen::Map<vec3>(&attr.vertices[mesh->vertex_array[new_c_idx].xref * 3]);
-		vec2 uv_a = Eigen::Map<vec2>(mesh->vertex_array[new_a_idx].uv);
-		vec2 uv_b = Eigen::Map<vec2>(mesh->vertex_array[new_b_idx].uv);
-		vec2 uv_c = Eigen::Map<vec2>(mesh->vertex_array[new_c_idx].uv);
+void compute_receiver_locations(Atlas_Output_Mesh *light_map_mesh, Mesh mesh, std::vector<Receiver> &receivers) {
 
-		Triangle  vert_tri = { vert_a,vert_b,vert_c };
+	static uint8_t pixel_is_processed[1024][1024];
+	for (int face_idx = 0; face_idx < light_map_mesh->index_count / 3; face_idx++) {
+		auto new_a_idx = light_map_mesh->index_array[face_idx * 3 + 0];
+		auto new_b_idx = light_map_mesh->index_array[face_idx * 3 + 1];
+		auto new_c_idx = light_map_mesh->index_array[face_idx * 3 + 2];
+		
+		int xref_a = light_map_mesh->vertex_array[new_a_idx].xref;
+		int xref_b = light_map_mesh->vertex_array[new_b_idx].xref;
+		int xref_c = light_map_mesh->vertex_array[new_c_idx].xref;
+
+		vec3 vert_a = mesh.verts[xref_a];
+		vec3 vert_b = mesh.verts[xref_b];
+		vec3 vert_c = mesh.verts[xref_c];
+
+		vec3 norm_a = mesh.normals[xref_a];
+		vec3 norm_b = mesh.normals[xref_b];
+		vec3 norm_c = mesh.normals[xref_c];
+
+
+
+		vec2 uv_a = Eigen::Map<vec2>(light_map_mesh->vertex_array[new_a_idx].uv);
+		vec2 uv_b = Eigen::Map<vec2>(light_map_mesh->vertex_array[new_b_idx].uv);
+		vec2 uv_c = Eigen::Map<vec2>(light_map_mesh->vertex_array[new_c_idx].uv);
+
 		Triangle2 uv_tri = { uv_a,uv_b,uv_c};
 
-		iAABB2 pixel_bounds = transform_to_pixel_space(aabb_from_triangle(uv_tri),mesh);
+		iAABB2 pixel_bounds = transform_to_pixel_space(aabb_from_triangle(uv_tri),light_map_mesh);
 		ivec2 min = pixel_bounds.min;
 		ivec2 max = pixel_bounds.max;
 		
@@ -210,11 +225,40 @@ void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, 
 			vec3 baryc = compute_barycentric_coords(get_pixel_center(pixel), uv_tri);
 			if (baryc.x()>0 && baryc.z()>0 && baryc.z()>0) {
 				pixel_is_processed[x][y] = true;
-				receivers.push_back(vert_tri.a*baryc.x() + vert_tri.b*baryc.y() + vert_tri.c*baryc.z());
+				vec3 pos = vert_a * baryc.x() + vert_b * baryc.y() + vert_c * baryc.z();
+				vec3 norm = norm_a * baryc.x() + norm_b * baryc.y() + norm_c * baryc.z();
+				receivers.push_back({ pos,norm });
 			}
 		}
 	}
 }
+
+void generate_normals(Mesh *mesh) {
+
+	mesh->normals = (vec3 *)calloc(mesh->num_verts, sizeof(vec3));
+
+	for (int i = 0; i < mesh->num_indices / 3; i++) {
+		int ia = mesh->indices[i * 3 + 0];
+		int ib = mesh->indices[i * 3 + 1];
+		int ic = mesh->indices[i * 3 + 2];
+
+		vec3 a = mesh->verts[ia];
+		vec3 b = mesh->verts[ib];
+		vec3 c = mesh->verts[ic];
+
+		vec3 n = (b - a).cross(c - a);
+
+		mesh->normals[ia] += n;
+		mesh->normals[ib] += n;
+		mesh->normals[ic] += n;
+	}
+
+	for (int i = 0; i < mesh->num_verts; i++) {
+		mesh->normals[i].normalize();
+	}
+
+}
+
 
 
 // @NOTE: tinyobj loader is modified to avoid reading mtl file 
@@ -230,6 +274,13 @@ void compute_receiver_locations(Atlas_Output_Mesh *mesh, tinyobj_attrib_t attr, 
 
 
 
+void free_mesh(Mesh *m) {
+	free(m->indices);
+	free(m->verts);
+	free(m->normals);
+}
+
+#include "local_transport.hpp"
 
 
 
@@ -348,8 +399,8 @@ int main(int argc, char * argv[]) {
 #endif
 	
 	static VoxelScene data;
-	{//voxelize and generate probes
-		Mesh m;
+	Mesh m = {};
+	{ // set up the mesh
 		m.num_verts = input_mesh.vertex_count;
 		m.num_indices = input_mesh.face_count * 3;
 		m.verts = (vec3 *)attr.vertices;// dangerous assumes no padding in the struct
@@ -359,9 +410,11 @@ int main(int argc, char * argv[]) {
 			indices[i * 3 + 0] = input_mesh.face_array[i].vertex_index[0];
 			indices[i * 3 + 1] = input_mesh.face_array[i].vertex_index[1];
 			indices[i * 3 + 2] = input_mesh.face_array[i].vertex_index[2];
-
 		}
 		m.indices = indices;
+		generate_normals(&m);
+	}
+	{//voxelize and generate probes
 		voxelize_scene(m, &data);
 		std::vector<ivec3>probe_voxels;
 		flood_fill_voxel_scene(&data, probe_voxels);
@@ -374,12 +427,15 @@ int main(int argc, char * argv[]) {
 		printf("Probes saved to ../probes.dat");
 		
 	}
+	std::vector<Receiver>receivers;
 
 	{
-		std::vector<vec3>receivers;
-		/////////////compute_receiver_locations(output_mesh, attr, receivers);
+		compute_receiver_locations(output_mesh, m, receivers);
+	}
+	{
 
 	}
+
 
 	// Free stuff
 	atlas_free(output_mesh);
@@ -388,5 +444,6 @@ int main(int argc, char * argv[]) {
 	tinyobj_attrib_free(&attr);
 	tinyobj_shapes_free(shapes, num_shapes);
 	tinyobj_materials_free(materials, num_materials);
+	free_mesh(&m);
 	return 0;
 }
