@@ -920,6 +920,8 @@ OBJLoader.prototype = {
             var verts_out = new Float32Array(3 * geometry.vertex_indices.length);
             // var normals_out =[(3 * geometry.vertices.length)];
             var normals_out =new Float32Array(3 * geometry.vertex_indices.length);
+
+            var tangents_out = new Float32Array(3*geometry.vertex_indices.length);
             var uvs_out = new Float32Array(2 * geometry.vertex_indices.length);
             if(geometry.vertex_indices.length != geometry.uv_indices.length) console.error('must provide uvs for all faces!');
             var num_tris = geometry.vertex_indices.length/3;
@@ -959,7 +961,7 @@ OBJLoader.prototype = {
                 var verts_in = state.vertices;
                 var uvs_in = state.uvs;
                 var normals_in = tmp_normals;
-
+                var tangents_in = tangents;
                 {
                     var indices =  geometry.vertex_indices;
                     var ia = indices[j*3 + 0];
@@ -985,6 +987,16 @@ OBJLoader.prototype = {
                     normals_out[j*9 + 6]=normals_in[ic+0];
                     normals_out[j*9 + 7]=normals_in[ic+1];
                     normals_out[j*9 + 8]=normals_in[ic+2];
+
+                    tangents_out[j*9 + 0]=tangents_in[ia+0]; 
+                    tangents_out[j*9 + 1]=tangents_in[ia+1];
+                    tangents_out[j*9 + 2]=tangents_in[ia+2];
+                    tangents_out[j*9 + 3]=tangents_in[ib+0];
+                    tangents_out[j*9 + 4]=tangents_in[ib+1];
+                    tangents_out[j*9 + 5]=tangents_in[ib+2];
+                    tangents_out[j*9 + 6]=tangents_in[ic+0];
+                    tangents_out[j*9 + 7]=tangents_in[ic+1];
+                    tangents_out[j*9 + 8]=tangents_in[ic+2];
                 }
                 {
                     var indices =  geometry.uv_indices;
@@ -1007,7 +1019,7 @@ OBJLoader.prototype = {
             
             container.push(
                 {
-                    tangents: tangents,
+                    tangents: tangents_out,
                     normals: normals_out, 
                     positions: verts_out, 
                     uvs: uvs_out, 
