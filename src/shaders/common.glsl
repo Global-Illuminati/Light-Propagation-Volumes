@@ -8,6 +8,12 @@ float saturate(in float value) {
 	return clamp(value, 0.0, 1.0);
 }
 
+void reortogonalize(in vec3 v0, inout vec3 v1)
+{
+	// Perform Gram-Schmidt's re-ortogonalization process to make v1 orthagonal to v1
+	v1 = normalize(v1 - dot(v1, v0) * v0);
+}
+
 vec2 spherical_from_direction(vec3 direction)
 {
 	highp float theta = acos(clamp(direction.y, -1.0, 1.0));

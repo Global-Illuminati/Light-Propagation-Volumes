@@ -32,7 +32,18 @@ void main()
 	vec3 T = normalize(v_tangent);
 	vec3 B = normalize(v_bitangent);
 
-	vec3 diffuse  = texture(u_diffuse_map, v_tex_coord).rgb;
+	// NOTE: We probably don't really need all (or any) of these
+	reortogonalize(N, T);
+	reortogonalize(N, B);
+	reortogonalize(T, B);
+	mat3 tbn = mat3(T, B, N);
+
+	// Rotate normal map normals from tangent space to view space (normal mapping)
+	vec3 mapped_normal = texture(u_normal_map, v_tex_coord).xyz;
+	mapped_normal = normalize(mapped_normal * vec3(2.0) - vec3(1.0));
+	N = tbn * mapped_normal;
+
+	vec3 diffuse = texture(u_diffuse_map, v_tex_coord).rgb;
 	float shininess = texture(u_specular_map, v_tex_coord).r;
 
 	vec3 wi = normalize(-u_dir_light_view_direction);
@@ -69,9 +80,7 @@ void main()
 		color += visibility * shininess * specular * u_dir_light_color;
 	}
 
-	o_color = vec4(color, 1.0);
-	
 	// output tangents
-	//o_color = vec4(color, 1.0) * vec4(0.001) + vec4(T * vec3(0.5) + vec3(0.5), 1.0);
-	
+	o_color = vec4(color, 1.0);
+
 }
