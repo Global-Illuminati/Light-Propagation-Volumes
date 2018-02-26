@@ -181,14 +181,11 @@ function init() {
 		var mtlLoader = new MTLLoader();
 
 		objLoader.load('assets/sponza/sponza.obj', function(objects) {
-			mtlLoader.load("assets/sponza/sponza.mtl",function(materials){
+			mtlLoader.load("assets/sponza/sponza.mtl", function(materials) {
 				for (var i = 0; i < objects.length; ++i) {
-					var material = undefined;
-					for(var m = 0; m<materials.length;m++){
-						if(materials[m].name === objects[i].material){
-							material = materials[m];
-						}
-					}
+
+					var materialName = objects[i].material;
+					var material = materials[materialName];
 
 					var vertexArray = createVertexArrayFromMeshInfo(objects[i]);
 

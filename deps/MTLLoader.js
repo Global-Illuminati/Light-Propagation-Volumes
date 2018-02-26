@@ -40,7 +40,7 @@ MTLLoader.prototype = {
             if(key === 'newmtl') {
                 //if start of new material, push the last material
                 if(material)
-                    materials.push(material);
+                    materials[material.name] = material;
                 material = {
                     name: value,
                     properties: {}
@@ -57,7 +57,7 @@ MTLLoader.prototype = {
         }
         //push the last material
         if(material && material.name && material.properties)
-            materials.push(material);
+            materials[material.name] = material;
         console.timeEnd('MTLLoader');
         return materials;
     },
