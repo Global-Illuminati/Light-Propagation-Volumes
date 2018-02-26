@@ -131,7 +131,8 @@ function loadObject(directory, objFilename, mtlFilename, modelMatrix) {
 				.texture('u_specular_map', loadTexture(specularMap))
 				.texture('u_normal_map', loadTexture(normalMap));
 
-				var shadowMappingDrawCall = app.createDrawCall(shadowMapShader, vertexArray);
+				var shadowMappingDrawCall = app.createDrawCall(shadowMapShader, vertexArray)
+				.texture('u_diffuse_map', loadTexture(diffuseMap));
 
 				meshes.push({
 					modelMatrix: modelMatrix || mat4.create(),
@@ -156,6 +157,7 @@ function init() {
 
 	var canvas = document.getElementById('canvas');
 	app = PicoGL.createApp(canvas, { antialias: true });
+	app.floatRenderTargets();
 
 	stats = new Stats();
 	stats.showPanel(1); // (frame time)
@@ -198,7 +200,7 @@ function init() {
 	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
 	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
 	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
-	shaderLoader.addShaderProgram('shadowMapping', 'shadow_mapping.vert.glsl', 'shadow_mapping.frag.glsl');
+	shaderLoader.addShaderProgram('shadowMapping', 'reflective_shadow_map.vert.glsl', 'reflective_shadow_map.frag.glsl');
 	shaderLoader.load(function(data) {
 
 		var fullscreenVertexArray = createFullscreenVertexArray();
@@ -294,22 +296,30 @@ function createSphereVertexArray(radius, rings, sectors) {
 }
 
 function setupDirectionalLightShadowMapFramebuffer(size) {
-
 	var colorBuffer = app.createTexture2D(size, size, {
-		format: PicoGL.RED,
-		internalFormat: PicoGL.R8,
 		minFilter: PicoGL.NEAREST,
 		magFilter: PicoGL.NEAREST
 	});
-
+	var positionBuffer = app.createTexture2D(size, size , {
+		type: PicoGL.FLOAT,
+		format: PicoGL.RBG8F,
+		internalFormat: PicoGL.RBG8F,
+		minFilter: PicoGL.NEAREST,
+		magFilter: PicoGL.NEAREST
+	});
+	var normalBuffer = app.createTexture2D(size, size, {
+		internalFormat: PicoGL.RBG8,
+		minFilter: PicoGL.NEAREST,
+		magFilter: PicoGL.NEAREST
+	});
 	var depthBuffer = app.createTexture2D(size, size, {
 		format: PicoGL.DEPTH_COMPONENT
 	});
-
 	shadowMapFramebuffer = app.createFramebuffer()
 	.colorTarget(0, colorBuffer)
+	.colorTarget(1, positionBuffer)
+	.colorTarget(2, normalBuffer)
 	.depthTarget(depthBuffer);
-
 }
 
 function setupSceneUniforms() {
@@ -415,7 +425,7 @@ function render() {
 		renderEnvironment(inverseViewProjection)
 
 		// Call this to get a debug render of the passed in texture
-		//renderTextureToScreen(shadowMap);
+		renderTextureToScreen(shadowMapFramebuffer.colorTextures[1]);
 
 	}
 	picoTimer.end();
@@ -461,6 +471,8 @@ function renderShadowMap() {
 	if (!shadowMapNeedsRendering()) return;
 
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
+	var lightViewDirection = directionalLight.viewSpaceDirection(camera);
+	var lightColor = directionalLight.color;
 
 	app.drawFramebuffer(shadowMapFramebuffer)
 	.viewport(0, 0, shadowMapSize, shadowMapSize)
@@ -476,6 +488,8 @@ function renderShadowMap() {
 		mesh.shadowMapDrawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_light_projection_from_world', lightViewProjection)
+		.uniform('u_light_direction', lightViewDirection)
+		.uniform('u_light_color', lightColor)
 		.draw();
 
 	}
