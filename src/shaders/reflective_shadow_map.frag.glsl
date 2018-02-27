@@ -2,8 +2,8 @@
 precision highp float;
 
 layout(location = 0) out vec4 o_color_map;
-layout(location = 1) out vec3 o_position_map;
-layout(location = 2) out vec3 o_normal_map;
+layout(location = 1) out vec4 o_position_map;
+layout(location = 2) out vec4 o_normal_map;
 
 uniform sampler2D u_diffuse_map;
 uniform vec3 u_light_direction;
@@ -26,6 +26,6 @@ void main()
 	vec4 flux = vec4(u_light_color * diffuse * saturate(dot(-light_direction, world_normal)), 1.0);
 
 	o_color_map = flux;
-	o_position_map = o_world_space_position.xyz;
-	o_normal_map = world_normal;
+	o_position_map = o_world_space_position;
+	o_normal_map = vec4(world_normal, 1.0);
 }

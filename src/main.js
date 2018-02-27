@@ -302,13 +302,11 @@ function setupDirectionalLightShadowMapFramebuffer(size) {
 	});
 	var positionBuffer = app.createTexture2D(size, size , {
 		type: PicoGL.FLOAT,
-		format: PicoGL.RBG8F,
-		internalFormat: PicoGL.RBG8F,
+		internalFormat: PicoGL.RBGA32F,
 		minFilter: PicoGL.NEAREST,
 		magFilter: PicoGL.NEAREST
 	});
 	var normalBuffer = app.createTexture2D(size, size, {
-		internalFormat: PicoGL.RBG8,
 		minFilter: PicoGL.NEAREST,
 		magFilter: PicoGL.NEAREST
 	});
@@ -425,7 +423,7 @@ function render() {
 		renderEnvironment(inverseViewProjection)
 
 		// Call this to get a debug render of the passed in texture
-		renderTextureToScreen(shadowMapFramebuffer.colorTextures[1]);
+		renderTextureToScreen(shadowMapFramebuffer.colorTextures[2]);
 
 	}
 	picoTimer.end();
