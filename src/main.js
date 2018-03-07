@@ -24,6 +24,8 @@ var picoTimer;
 var defaultShader;
 var shadowMapShader;
 
+var pointCloud;
+
 var blitTextureDrawCall;
 var environmentDrawCall;
 
@@ -192,6 +194,8 @@ function init() {
 
 	setupSceneUniforms();
 
+	pointCloud = new RSMPointCloud(shadowMapSize);
+
 	var shaderLoader = new ShaderLoader('src/shaders/');
 	shaderLoader.addShaderFile('common.glsl');
 	shaderLoader.addShaderFile('scene_uniforms.glsl');
@@ -200,13 +204,17 @@ function init() {
 	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
 	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
 	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
-	shaderLoader.addShaderProgram('shadowMapping', 'reflective_shadow_map.vert.glsl', 'reflective_shadow_map.frag.glsl');
+	shaderLoader.addShaderProgram('shadowMapping', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
+	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_inject.vert.glsl', 'lpv/light_inject.frag.glsl');
 	shaderLoader.load(function(data) {
 
 		var fullscreenVertexArray = createFullscreenVertexArray();
 
 		var textureBlitShader = makeShader('textureBlit', data);
 		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
+
+		var lightInjectShader = makeShader('lightInjection', data);
+		pointCloud.createDrawCall(lightInjectShader);
 
 		var environmentShader = makeShader('environment', data);
 		environmentDrawCall = app.createDrawCall(environmentShader, fullscreenVertexArray)
@@ -415,6 +423,7 @@ function render() {
 
 		renderShadowMap();
 		renderScene();
+		pointCloud.render(shadowMapFramebuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 		renderProbes(viewProjection);
@@ -423,7 +432,7 @@ function render() {
 		renderEnvironment(inverseViewProjection)
 
 		// Call this to get a debug render of the passed in texture
-		renderTextureToScreen(shadowMapFramebuffer.colorTextures[2]);
+		//renderTextureToScreen(shadowMapFramebuffer.colorTextures[2]);
 
 	}
 	picoTimer.end();
@@ -482,7 +491,7 @@ function renderShadowMap() {
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 
 		var mesh = meshes[i];
-
+		
 		mesh.shadowMapDrawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_light_projection_from_world', lightViewProjection)
@@ -510,7 +519,6 @@ function renderScene() {
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 
 		var mesh = meshes[i];
-
 		mesh.drawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_view_from_world', camera.viewMatrix)
