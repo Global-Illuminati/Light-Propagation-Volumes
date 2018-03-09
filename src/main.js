@@ -306,17 +306,20 @@ function createSphereVertexArray(radius, rings, sectors) {
 function setupDirectionalLightShadowMapFramebuffer(size) {
 	var colorBuffer = app.createTexture2D(size, size, {
 		minFilter: PicoGL.NEAREST,
-		magFilter: PicoGL.NEAREST
+		magFilter: PicoGL.NEAREST,
+		generateMipmaps: true
 	});
 	var positionBuffer = app.createTexture2D(size, size , {
 		type: PicoGL.FLOAT,
 		internalFormat: PicoGL.RBGA32F,
 		minFilter: PicoGL.NEAREST,
-		magFilter: PicoGL.NEAREST
+		magFilter: PicoGL.NEAREST,
+		generateMipmaps: true
 	});
 	var normalBuffer = app.createTexture2D(size, size, {
 		minFilter: PicoGL.NEAREST,
-		magFilter: PicoGL.NEAREST
+		magFilter: PicoGL.NEAREST,
+		generateMipmaps: true
 	});
 	var depthBuffer = app.createTexture2D(size, size, {
 		format: PicoGL.DEPTH_COMPONENT
@@ -422,8 +425,8 @@ function render() {
 		camera.update();
 
 		renderShadowMap();
-		renderScene();
 		pointCloud.render(shadowMapFramebuffer);
+		renderScene();
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 		renderProbes(viewProjection);
@@ -513,8 +516,8 @@ function renderScene() {
 	.defaultViewport()
 	.depthTest()
 	.depthFunc(PicoGL.LEQUAL)
-	.noBlend()
-	.clear();
+	.noBlend();
+	//.clear();
 
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 
