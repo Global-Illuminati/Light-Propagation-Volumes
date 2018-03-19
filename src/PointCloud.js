@@ -7,19 +7,19 @@ RSMPointCloud.prototype = {
     constructor: RSMPointCloud,
 
     createPointCloud: function() {
-        var positionData = new Float32Array(this.size * this.size * 2);
+        const positionData = new Float32Array(this.size * this.size * 2);
 
-        var positionIndex = 0;
-        for(var x = 0; x < this.size; x++) {
-            for(var y = 0; y < this.size; y++) {
+        let positionIndex = 0;
+        for (let x = 0; x < this.size; x++) {
+            for (let y = 0; y < this.size; y++) {
                 positionData[positionIndex++] = x;
                 positionData[positionIndex++] = y;
             }
         }
 
-        var pointPositions = app.createVertexBuffer(PicoGL.FLOAT, 2, positionData);
+        const pointPositions = app.createVertexBuffer(PicoGL.FLOAT, 2, positionData);
 
-        var pointArray = app.createVertexArray()
+        const pointArray = app.createVertexArray()
         .vertexAttributeBuffer(0, pointPositions);
 
         return pointArray;
@@ -32,11 +32,11 @@ RSMPointCloud.prototype = {
     },
 
     createFrameBuffer: function() {
-        this.redBuffer = app.createTexture3D(this.size, this.size, this.size);
-        this.greenBuffer = app.createTexture3D(this.size, this.size, this.size);
-        this.blueBuffer = app.createTexture3D(this.size, this.size, this.size);
+        this.redBuffer = app.createTexture3D(null, this.size, this.size, this.size);
+        this.greenBuffer = app.createTexture3D(null, this.size, this.size, this.size);
+        this.blueBuffer = app.createTexture3D(null, this.size, this.size, this.size);
 
-        var frameBuffer = app.createFramebuffer()
+        const frameBuffer = app.createFramebuffer()
         .colorTarget(0, this.redBuffer)
         .colorTarget(1, this.greenBuffer)
         .colorTarget(2, this.blueBuffer);
@@ -47,10 +47,11 @@ RSMPointCloud.prototype = {
     render(_RSMFrameBuffer) {
         if(_RSMFrameBuffer) {
             
-            var rsmFlux = _RSMFrameBuffer.colorTextures[0];
-            var rsmPositions = _RSMFrameBuffer.colorTextures[1];
-            var rsmNormals = _RSMFrameBuffer.colorTextures[2];
-            if(this.drawCall && this.frameBuffer) {
+            const rsmFlux = _RSMFrameBuffer.colorTextures[0];
+            const rsmPositions = _RSMFrameBuffer.colorTextures[1];
+            const rsmNormals = _RSMFrameBuffer.colorTextures[2];
+
+            if (this.drawCall && this.frameBuffer) {
 
                 app.defaultDrawFramebuffer()
 	            .defaultViewport()
@@ -58,6 +59,7 @@ RSMPointCloud.prototype = {
 	            .depthFunc(PicoGL.LEQUAL)
                 .noBlend()
                 .clear();
+
                 //TODO:figure out the correct texture slice to render to
                 /*
                 for(var i = 0; i < this.size; i++)
@@ -78,6 +80,7 @@ RSMPointCloud.prototype = {
 
                     this.drawCall.draw();
                 }*/
+
                 this.drawCall
                 .texture('u_rsm_flux', rsmFlux)
                 .texture('u_rsm_world_positions', rsmPositions)
@@ -88,4 +91,4 @@ RSMPointCloud.prototype = {
             }
         }
     }
-}
+};
