@@ -435,7 +435,7 @@ function render() {
 		renderEnvironment(inverseViewProjection)
 
 		// Call this to get a debug render of the passed in texture
-		//renderTextureToScreen(shadowMapFramebuffer.colorTextures[2]);
+		renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
 
 	}
 	picoTimer.end();

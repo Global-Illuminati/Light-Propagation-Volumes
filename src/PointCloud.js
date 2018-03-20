@@ -1,6 +1,6 @@
 function RSMPointCloud(_size) {
     this.size = _size || 4096;
-    this.frameBuffer = this.createFrameBuffer();
+    this.framebuffer = this.createFramebuffer();
 }
 
 RSMPointCloud.prototype = {
@@ -31,17 +31,18 @@ RSMPointCloud.prototype = {
         return this.drawCall;
     },
 
-    createFrameBuffer: function() {
-        this.redBuffer = app.createTexture2D(this.size, this.size);
-        this.greenBuffer = app.createTexture2D(this.size, this.size);
-        this.blueBuffer = app.createTexture2D(this.size, this.size);
+    createFramebuffer: function(_size) {
+        this.framebufferSize = _size || 32;
+        this.redBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
+        this.greenBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
+        this.blueBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
 
-        const frameBuffer = app.createFramebuffer()
+        const framebuffer = app.createFramebuffer()
         .colorTarget(0, this.redBuffer)
         .colorTarget(1, this.greenBuffer)
         .colorTarget(2, this.blueBuffer);
 
-        return frameBuffer;
+        return framebuffer;
     },
 
     render(_RSMFrameBuffer) {
@@ -52,13 +53,20 @@ RSMPointCloud.prototype = {
             const rsmNormals = _RSMFrameBuffer.colorTextures[2];
 
             if (this.drawCall && this.frameBuffer) {
-
+                /*
                 app.defaultDrawFramebuffer()
 	            .defaultViewport()
 	            .depthTest()
 	            .depthFunc(PicoGL.LEQUAL)
                 .noBlend()
                 .clear();
+                */
+               app.drawFramebuffer(this.frameBuffer)
+	            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+	            .depthTest()
+	            .depthFunc(PicoGL.LEQUAL)
+	            .noBlend()
+	            .clear();
 
                 //TODO:figure out the correct texture slice to render to
                 /*
@@ -86,6 +94,7 @@ RSMPointCloud.prototype = {
                 .texture('u_rsm_world_positions', rsmPositions)
                 .texture('u_rsm_world_normals', rsmNormals)
                 .uniform('u_rsm_size', this.size)
+                .uniform('u_texture_size', this.framebufferSize)
                 .uniform('u_world_from_local', mat4.create())
 	    	    .uniform('u_view_from_world', camera.viewMatrix)
                 .uniform('u_projection_from_view', camera.projectionMatrix)

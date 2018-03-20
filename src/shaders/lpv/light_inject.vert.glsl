@@ -4,7 +4,7 @@
 
 layout(location = 0) in vec2 a_point_position;
 
-uniform int u_texture_slice;
+uniform int u_texture_size;
 uniform int u_rsm_size;
 
 uniform sampler2D u_rsm_flux;
@@ -44,6 +44,17 @@ RSMTexel getRSMTexel(ivec2 texCoord)
 	return texel;
 }
 
+//get ndc texture coordinates from gridcell
+vec2 getRenderingTexCoords(ivec3 gridCell)
+{
+	float f_texture_size = float(u_texture_size);
+	vec2 texCoords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
+	vec2 ndc = vec2(2.0 * texCoords.x / f_texture_size * f_texture_size, 2.0 * texCoords.y / f_texture_size) - 1.0;
+	return ndc;
+}
+
+out vec2 t_coord;
+
 //TODO:figure out of to get the correct texture layer and render to the 3d texture correctly
 void main()
 {
@@ -55,8 +66,11 @@ void main()
 	mat4 transformations = u_projection_from_view * u_view_from_world * u_world_from_local;
 	vec4 worldGridPos = transformations * vec4(v_grid_cell, 1.0);
 
+	vec2 tex_coord = getRenderingTexCoords(v_grid_cell);
+	t_coord = tex_coord;
+
 	gl_PointSize = 4.0;
 	//gl_Position = transformations * vec4(v_rsm_texel.world_position, 1.0);
-	gl_Position = worldGridPos;
+	gl_Position = vec4(tex_coord, 0.0, 1.0);
 	//gl_Position = vec4(v_grid_cell, 1.0);
 }
