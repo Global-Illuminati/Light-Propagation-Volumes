@@ -56,5 +56,7 @@ void main()
 	vec4 worldGridPos = transformations * vec4(v_grid_cell, 1.0);
 
 	gl_PointSize = 4.0;
-	gl_Position = vec4(v_grid_cell, 1.0);
+	//gl_Position = transformations * vec4(v_rsm_texel.world_position, 1.0);
+	gl_Position = worldGridPos;
+	//gl_Position = vec4(v_grid_cell, 1.0);
 }

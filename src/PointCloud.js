@@ -1,5 +1,5 @@
 function RSMPointCloud(_size) {
-    this.size = 4096 || _size;
+    this.size = _size || 4096;
     this.frameBuffer = this.createFrameBuffer();
 }
 
@@ -26,15 +26,15 @@ RSMPointCloud.prototype = {
     },
 
     createDrawCall: function(_shader) {
-        this.drawCall = app.createDrawCall(_shader, this.createPointCloud(), PicoGL.POINTS);
+    this.drawCall = app.createDrawCall(_shader, this.createPointCloud(), /*PicoGL.POINTS*/);
         
         return this.drawCall;
     },
 
     createFrameBuffer: function() {
-        this.redBuffer = app.createTexture3D(null, this.size, this.size, this.size);
-        this.greenBuffer = app.createTexture3D(null, this.size, this.size, this.size);
-        this.blueBuffer = app.createTexture3D(null, this.size, this.size, this.size);
+        this.redBuffer = app.createTexture2D(this.size, this.size);
+        this.greenBuffer = app.createTexture2D(this.size, this.size);
+        this.blueBuffer = app.createTexture2D(this.size, this.size);
 
         const frameBuffer = app.createFramebuffer()
         .colorTarget(0, this.redBuffer)
@@ -85,9 +85,11 @@ RSMPointCloud.prototype = {
                 .texture('u_rsm_flux', rsmFlux)
                 .texture('u_rsm_world_positions', rsmPositions)
                 .texture('u_rsm_world_normals', rsmNormals)
+                .uniform('u_rsm_size', this.size)
                 .uniform('u_world_from_local', mat4.create())
 	    	    .uniform('u_view_from_world', camera.viewMatrix)
-                .uniform('u_projection_from_view', camera.projectionMatrix);
+                .uniform('u_projection_from_view', camera.projectionMatrix)
+                .draw();
             }
         }
     }
