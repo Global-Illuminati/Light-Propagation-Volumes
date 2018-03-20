@@ -16,7 +16,8 @@ in vec2 v_tex_coord;
 
 #include <common.glsl>
 
-#define USING_DIR_LIGHT
+//TODO: double check flux calculation
+//#define USING_DIR_LIGHT
 
 void main()
 {

@@ -35,7 +35,7 @@ void main()
 	vec4 shG = SH_coeffs * v_rsm_texel.flux.g;
 	vec4 shB = SH_coeffs * v_rsm_texel.flux.b;
 
-	o_red_color = vec4(1.0,0.0, 0.0, 1.0);
+	o_red_color = v_rsm_texel.flux;
 	o_green_color = shG;
 	o_blue_color = shB;
 }

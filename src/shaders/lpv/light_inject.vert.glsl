@@ -29,17 +29,17 @@ struct RSMTexel
 out RSMTexel v_rsm_texel;
 flat out ivec3 v_grid_cell;
 
-ivec3 getGridCell(vec3 pos, vec3 normal) 
+ivec3 getGridCell(vec3 pos) 
 {
 	//displace by half a normal
-	return ivec3((pos / CELLSIZE) + 0.5 * normal);
+	return ivec3(pos / CELLSIZE) + ivec3(16);
 }
 
 RSMTexel getRSMTexel(ivec2 texCoord) 
 {
 	RSMTexel texel;
 	texel.world_normal = texelFetch(u_rsm_world_normals, texCoord, 0).xyz;
-	texel.world_position = texelFetch(u_rsm_world_positions, texCoord, 0).xyz;
+	texel.world_position = texelFetch(u_rsm_world_positions, texCoord, 0).xyz + 0.5 * texel.world_normal;
 	texel.flux = texelFetch(u_rsm_flux, texCoord, 0);
 	return texel;
 }
@@ -48,8 +48,10 @@ RSMTexel getRSMTexel(ivec2 texCoord)
 vec2 getRenderingTexCoords(ivec3 gridCell)
 {
 	float f_texture_size = float(u_texture_size);
+	//displace int coordinates with 0.5
 	vec2 texCoords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
-	vec2 ndc = vec2(2.0 * texCoords.x / f_texture_size * f_texture_size, 2.0 * texCoords.y / f_texture_size) - 1.0;
+	//get ndc coordinates
+	vec2 ndc = vec2((2.0 * texCoords.x) / (f_texture_size * f_texture_size), (2.0 * texCoords.y) / f_texture_size) - vec2(1.0);
 	return ndc;
 }
 
@@ -61,7 +63,7 @@ void main()
 	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
 
 	v_rsm_texel = getRSMTexel(rsmTexCoords);
-	v_grid_cell = getGridCell(v_rsm_texel.world_position,v_rsm_texel.world_normal);
+	v_grid_cell = getGridCell(v_rsm_texel.world_position);
 
 	mat4 transformations = u_projection_from_view * u_view_from_world * u_world_from_local;
 	vec4 worldGridPos = transformations * vec4(v_grid_cell, 1.0);

@@ -26,7 +26,7 @@ RSMPointCloud.prototype = {
     },
 
     createDrawCall: function(_shader) {
-    this.drawCall = app.createDrawCall(_shader, this.createPointCloud(), /*PicoGL.POINTS*/);
+    this.drawCall = app.createDrawCall(_shader, this.createPointCloud(), PicoGL.POINTS);
         
         return this.drawCall;
     },
@@ -52,16 +52,15 @@ RSMPointCloud.prototype = {
             const rsmPositions = _RSMFrameBuffer.colorTextures[1];
             const rsmNormals = _RSMFrameBuffer.colorTextures[2];
 
-            if (this.drawCall && this.frameBuffer) {
-                /*
-                app.defaultDrawFramebuffer()
+            if (this.drawCall && this.framebuffer) {
+               /* app.defaultDrawFramebuffer()
 	            .defaultViewport()
 	            .depthTest()
 	            .depthFunc(PicoGL.LEQUAL)
                 .noBlend()
-                .clear();
-                */
-               app.drawFramebuffer(this.frameBuffer)
+                .clear();*/
+
+               app.drawFramebuffer(this.framebuffer)
 	            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
 	            .depthTest()
 	            .depthFunc(PicoGL.LEQUAL)
@@ -95,9 +94,9 @@ RSMPointCloud.prototype = {
                 .texture('u_rsm_world_normals', rsmNormals)
                 .uniform('u_rsm_size', this.size)
                 .uniform('u_texture_size', this.framebufferSize)
-                .uniform('u_world_from_local', mat4.create())
-	    	    .uniform('u_view_from_world', camera.viewMatrix)
-                .uniform('u_projection_from_view', camera.projectionMatrix)
+                //.uniform('u_world_from_local', mat4.create())
+	    	    //.uniform('u_view_from_world', camera.viewMatrix)
+                //.uniform('u_projection_from_view', camera.projectionMatrix)
                 .draw();
             }
         }
