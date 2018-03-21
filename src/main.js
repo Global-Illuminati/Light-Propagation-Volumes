@@ -34,6 +34,9 @@ var sceneUniforms;
 var shadowMapSize = 4096;
 var shadowMapFramebuffer;
 
+var shadowMapSmallSize = 512;
+var shadowMapSmallFramebuffer;
+
 var camera;
 var directionalLight;
 var meshes = [];
@@ -145,7 +148,7 @@ function loadObject(directory, objFilename, mtlFilename, modelMatrix) {
 			});
 		});
 	});
-
+	renderShadowMap();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -190,11 +193,12 @@ function init() {
 	// Scene setup
 
 	directionalLight = new DirectionalLight();
-	setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
+	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
+	shadowMapSmallFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize);
 
 	setupSceneUniforms();
 
-	pointCloud = new RSMPointCloud(shadowMapSize);
+	pointCloud = new RSMPointCloud(shadowMapSmallSize);
 
 	var shaderLoader = new ShaderLoader('src/shaders/');
 	shaderLoader.addShaderFile('common.glsl');
@@ -227,6 +231,14 @@ function init() {
 		defaultShader = makeShader('default', data);
 		shadowMapShader = makeShader('shadowMapping', data);
 		loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
+		{
+			let m = mat4.create();
+			let r = quat.fromEuler(quat.create(), 0, 45, 0);
+			let t = vec3.fromValues(0, 1, 0);
+			let s = vec3.fromValues(0.06, 0.06, 0.06);
+			mat4.fromRotationTranslationScale(m, r, t, s);
+			loadObject('teapot/', 'teapot.obj', 'default.mtl', m);
+		}
 
 	});
 
@@ -324,11 +336,13 @@ function setupDirectionalLightShadowMapFramebuffer(size) {
 	var depthBuffer = app.createTexture2D(size, size, {
 		format: PicoGL.DEPTH_COMPONENT
 	});
-	shadowMapFramebuffer = app.createFramebuffer()
+	var framebuffer = app.createFramebuffer()
 	.colorTarget(0, colorBuffer)
 	.colorTarget(1, positionBuffer)
 	.colorTarget(2, normalBuffer)
 	.depthTarget(depthBuffer);
+
+	return framebuffer;
 }
 
 function setupSceneUniforms() {
@@ -425,7 +439,7 @@ function render() {
 		camera.update();
 
 		renderShadowMap();
-		pointCloud.render(shadowMapFramebuffer);
+		pointCloud.render(shadowMapSmallFramebuffer);
 		renderScene();
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
@@ -435,7 +449,8 @@ function render() {
 		renderEnvironment(inverseViewProjection)
 
 		// Call this to get a debug render of the passed in texture
-		renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
+		renderTextureToScreen(pointCloud.framebuffer.colorTextures[2]);
+		//renderTextureToScreen(shadowMapFramebuffer.colorTextures[0]);
 
 	}
 	picoTimer.end();
@@ -478,6 +493,31 @@ function shadowMapNeedsRendering() {
 function renderShadowMap() {
 
 	if (!directionalLight) return;
+	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
+	var lightViewDirection = directionalLight.viewSpaceDirection(camera);
+	var lightColor = directionalLight.color;
+
+	app.drawFramebuffer(shadowMapSmallFramebuffer)
+	.viewport(0, 0, shadowMapSmallSize, shadowMapSmallSize)
+	.depthTest()
+	.depthFunc(PicoGL.LEQUAL)
+	.noBlend()
+	.clear();
+
+	for (var i = 0, len = meshes.length; i < len; ++i) {
+
+		var mesh = meshes[i];
+		
+		mesh.shadowMapDrawCall
+		.uniform('u_world_from_local', mesh.modelMatrix)
+		.uniform('u_light_projection_from_world', lightViewProjection)
+		.uniform('u_light_direction', lightViewDirection)
+		.uniform('u_light_color', lightColor)
+		.draw();
+
+	}
+
+	//TODO: only render when needed to
 	if (!shadowMapNeedsRendering()) return;
 
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
@@ -503,7 +543,6 @@ function renderShadowMap() {
 		.draw();
 
 	}
-
 }
 
 function renderScene() {

@@ -11,13 +11,7 @@ uniform sampler2D u_rsm_flux;
 uniform sampler2D u_rsm_world_positions;
 uniform sampler2D u_rsm_world_normals;
 
-uniform mat4 u_world_from_local;
-uniform mat4 u_view_from_world;
-uniform mat4 u_projection_from_view;
-
-#define v_min vec3(0.0)
 #define CELLSIZE 4.0
-#define GRIDSIZE 32.0
 
 struct RSMTexel 
 {
@@ -31,14 +25,15 @@ flat out ivec3 v_grid_cell;
 
 ivec3 getGridCell(vec3 pos) 
 {
-	//displace by half a normal
-	return ivec3(pos / CELLSIZE) + ivec3(16);
+	int halfGridSize = u_texture_size / 2;
+	return ivec3(pos / CELLSIZE) + ivec3(halfGridSize);
 }
 
 RSMTexel getRSMTexel(ivec2 texCoord) 
 {
 	RSMTexel texel;
 	texel.world_normal = texelFetch(u_rsm_world_normals, texCoord, 0).xyz;
+	//displace the position by half a normal
 	texel.world_position = texelFetch(u_rsm_world_positions, texCoord, 0).xyz + 0.5 * texel.world_normal;
 	texel.flux = texelFetch(u_rsm_flux, texCoord, 0);
 	return texel;
@@ -55,9 +50,6 @@ vec2 getRenderingTexCoords(ivec3 gridCell)
 	return ndc;
 }
 
-out vec2 t_coord;
-
-//TODO:figure out of to get the correct texture layer and render to the 3d texture correctly
 void main()
 {
 	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
@@ -65,11 +57,7 @@ void main()
 	v_rsm_texel = getRSMTexel(rsmTexCoords);
 	v_grid_cell = getGridCell(v_rsm_texel.world_position);
 
-	mat4 transformations = u_projection_from_view * u_view_from_world * u_world_from_local;
-	vec4 worldGridPos = transformations * vec4(v_grid_cell, 1.0);
-
 	vec2 tex_coord = getRenderingTexCoords(v_grid_cell);
-	t_coord = tex_coord;
 
 	gl_PointSize = 4.0;
 	//gl_Position = transformations * vec4(v_rsm_texel.world_position, 1.0);

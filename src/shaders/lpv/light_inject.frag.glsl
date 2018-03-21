@@ -21,12 +21,13 @@ struct RSMTexel {
 };
 
 in RSMTexel v_rsm_texel;
-in vec2 t_coord;
 
 vec4 evalCosineLobeToDir(vec3 dir) {
 	//f00, f-11, f01, f11
 	return vec4( SH_cosLobe_C0, -SH_cosLobe_C1 * dir.y, SH_cosLobe_C1 * dir.z, -SH_cosLobe_C1 * dir.x );
 }
+
+#define DEBUG_RENDER
 
 void main()
 {
@@ -35,7 +36,13 @@ void main()
 	vec4 shG = SH_coeffs * v_rsm_texel.flux.g;
 	vec4 shB = SH_coeffs * v_rsm_texel.flux.b;
 
-	o_red_color = v_rsm_texel.flux;
+#ifdef DEBUG_RENDER
+	o_red_color = vec4(normalize(shR.xyz),1.0);
+	o_green_color = vec4(normalize(shG.xyz),1.0);
+	o_blue_color = vec4(normalize(shB.xyz),1.0);
+#else
+	o_red_color = shR;
 	o_green_color = shG;
 	o_blue_color = shB;
+#endif
 }

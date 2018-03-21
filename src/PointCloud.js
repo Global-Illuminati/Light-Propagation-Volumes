@@ -1,6 +1,7 @@
 function RSMPointCloud(_size) {
     this.size = _size || 4096;
-    this.framebuffer = this.createFramebuffer();
+    this.framebuffer = this.createFramebuffer(32);
+    console.log(this.size);
 }
 
 RSMPointCloud.prototype = {
@@ -33,14 +34,14 @@ RSMPointCloud.prototype = {
 
     createFramebuffer: function(_size) {
         this.framebufferSize = _size || 32;
-        this.redBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
-        this.greenBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
-        this.blueBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
+        const redBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
+        const greenBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
+        const blueBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
 
         const framebuffer = app.createFramebuffer()
-        .colorTarget(0, this.redBuffer)
-        .colorTarget(1, this.greenBuffer)
-        .colorTarget(2, this.blueBuffer);
+        .colorTarget(0, redBuffer)
+        .colorTarget(1, greenBuffer)
+        .colorTarget(2, blueBuffer);
 
         return framebuffer;
     },

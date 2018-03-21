@@ -17,7 +17,7 @@ in vec2 v_tex_coord;
 #include <common.glsl>
 
 //TODO: double check flux calculation
-//#define USING_DIR_LIGHT
+#define USING_DIR_LIGHT
 
 void main()
 {
@@ -27,7 +27,7 @@ void main()
 	float light_falloff = saturate(dot(-light_direction, world_normal));
 
 	#ifdef USING_DIR_LIGHT
-		vec4 flux = vec4(u_light_color * diffuse, 1.0);
+		vec4 flux = vec4((u_light_color * diffuse), 1.0);
 	#else
 		vec4 flux = vec4(u_light_color * diffuse * light_falloff, 1.0);
 	#endif
