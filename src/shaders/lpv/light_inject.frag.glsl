@@ -3,7 +3,7 @@ precision highp float;
 
 #define PI 3.1415926f
 
-#define SH_C0 0.282094792f // 1 / 2sqrt(pi)
+#define SH_C0 0.282094791f // 1 / 2sqrt(pi)
 #define SH_C1 0.488602512f // sqrt(3/pi) / 2
 
 /*Cosine lobe coeff*/
@@ -22,12 +22,38 @@ struct RSMTexel {
 
 in RSMTexel v_rsm_texel;
 
+///////////////////////////////////
+//Used in crytek paper
+vec4 SHRotate(const vec3 dir, const vec2 ZHCoeffs)
+{
+	vec2 theta = normalize(dir.xy);
+
+	vec2 phi;
+	phi.x = sqrt(1.0 - dir.z * dir.z);
+	phi.y = dir.z;
+
+	vec4 result;
+	result.x = ZHCoeffs.x;
+	result.y = ZHCoeffs.y * phi.x * theta.x;
+	result.z = -ZHCoeffs.y * phi.y;
+	result.w = ZHCoeffs.y * phi.x * theta.x;
+	return result;
+}
+
+vec4 SHProjectCone(const vec3 dir)
+{
+	const vec2 ZHCoeffs = vec2(0.25, 0.5);
+	return SHRotate(dir, ZHCoeffs);
+}
+////////////////////////////////////
+
 vec4 evalCosineLobeToDir(vec3 dir) {
+	dir = normalize(dir);
 	//f00, f-11, f01, f11
 	return vec4( SH_cosLobe_C0, -SH_cosLobe_C1 * dir.y, SH_cosLobe_C1 * dir.z, -SH_cosLobe_C1 * dir.x );
 }
 
-#define DEBUG_RENDER
+//#define DEBUG_RENDER
 
 void main()
 {

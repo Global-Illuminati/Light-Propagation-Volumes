@@ -7,6 +7,8 @@ layout(location = 0) in vec2 a_point_position;
 uniform int u_texture_size;
 uniform int u_rsm_size;
 
+uniform vec3 u_light_direction;
+
 uniform sampler2D u_rsm_flux;
 uniform sampler2D u_rsm_world_positions;
 uniform sampler2D u_rsm_world_normals;
@@ -39,6 +41,16 @@ RSMTexel getRSMTexel(ivec2 texCoord)
 	return texel;
 }
 
+float luminance(const in vec3 color)
+{
+	return color.r * 0.299 + color.g * 0.587 + color.b * 0.114;
+}
+
+float getTexelLuminance(const in RSMTexel texel)
+{
+	return luminance(texel.flux.rgb) * max(0.0, dot(texel.world_normal, -u_light_direction));
+}
+
 //get ndc texture coordinates from gridcell
 vec2 getRenderingTexCoords(ivec3 gridCell)
 {
@@ -50,10 +62,66 @@ vec2 getRenderingTexCoords(ivec3 gridCell)
 	return ndc;
 }
 
+//TODO: look into downsampling in the shader
+RSMTexel getDownSampledTexel()
+{
+	const int downSamplingFactor = 4;
+	int newRSMSize = u_rsm_size / downSamplingFactor;
+	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
+
+	ivec3 brightestCell = ivec3(0.0);
+	float maxLuminance = 0.0;
+	{
+		for(int i = 0; i < downSamplingFactor; i++)
+		{
+			for(int j = 0; j < downSamplingFactor; j++)
+			{
+				//fullsize texcoords
+				ivec2 texCoords = rsmTexCoords * downSamplingFactor + ivec2(i, j);
+				RSMTexel rsmTexel = getRSMTexel(texCoords);
+				float luminance = getTexelLuminance(rsmTexel);
+				if(luminance > maxLuminance)
+				{
+					brightestCell = getGridCell(rsmTexel.world_position);
+					maxLuminance = luminance;
+				}
+			}
+		}
+	}
+
+	RSMTexel result;
+
+	int nSamples = 0;
+	for(int i = 0; i < downSamplingFactor; i++)
+	{
+		for(int j = 0; j < downSamplingFactor; j++)
+		{
+			ivec2 texCoords = rsmTexCoords * downSamplingFactor + ivec2(i, j);
+			RSMTexel rsmTexel = getRSMTexel(texCoords);
+			ivec3 texelCell = getGridCell(rsmTexel.world_position);
+			vec3 deltaCell = vec3(texelCell - brightestCell);
+			if(dot(deltaCell, deltaCell) < 3.0)
+			{
+				result.flux += rsmTexel.flux;
+				result.world_position += rsmTexel.world_position;
+				result.world_normal += rsmTexel.world_normal;
+				nSamples++;
+			}
+		}
+	}
+
+	if(nSamples > 0)
+	{
+		result.flux /= float(nSamples);
+		result.world_position /= float(nSamples);
+		result.world_normal /= float(nSamples);
+	}
+	return result;
+}
+
 void main()
 {
 	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
-
 	v_rsm_texel = getRSMTexel(rsmTexCoords);
 	v_grid_cell = getGridCell(v_rsm_texel.world_position);
 

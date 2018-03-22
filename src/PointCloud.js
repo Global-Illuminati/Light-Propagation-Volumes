@@ -95,6 +95,7 @@ RSMPointCloud.prototype = {
                 .texture('u_rsm_world_normals', rsmNormals)
                 .uniform('u_rsm_size', this.size)
                 .uniform('u_texture_size', this.framebufferSize)
+                //.uniform('u_light_direction', directionalLight.direction)
                 //.uniform('u_world_from_local', mat4.create())
 	    	    //.uniform('u_view_from_world', camera.viewMatrix)
                 //.uniform('u_projection_from_view', camera.projectionMatrix)
