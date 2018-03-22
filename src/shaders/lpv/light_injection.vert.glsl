@@ -1,4 +1,5 @@
 #version 300 es
+precision highp float;
 
 #include <common.glsl>
 
@@ -37,17 +38,19 @@ RSMTexel getRSMTexel(ivec2 texCoord)
 {
 	RSMTexel texel;
 	texel.world_normal = texelFetch(u_rsm_world_normals, texCoord, 0).xyz;
+
 	//displace the position by half a normal
 	texel.world_position = texelFetch(u_rsm_world_positions, texCoord, 0).xyz + 0.5 * texel.world_normal;
 	texel.flux = texelFetch(u_rsm_flux, texCoord, 0);
 	return texel;
 }
 
-float luminance(const in vec3 color)
-{
+//calculate luminance given a color
+float luminance(const in vec3 color) {
 	return color.r * 0.299 + color.g * 0.587 + color.b * 0.114;
 }
 
+//get luminance from texel
 float getTexelLuminance(const in RSMTexel texel)
 {
 	return luminance(texel.flux.rgb) * max(0.0, dot(texel.world_normal, -u_light_direction));
