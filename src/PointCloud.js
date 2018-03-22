@@ -6,7 +6,7 @@ function RSMPointCloud(_size) {
 RSMPointCloud.prototype = {
     constructor: RSMPointCloud,
 
-    createPointCloud: function() {
+    createInjectionPointCloud: function() {
         const positionData = new Float32Array(this.size * this.size * 2);
 
         let positionIndex = 0;
@@ -25,10 +25,17 @@ RSMPointCloud.prototype = {
         return pointArray;
     },
 
+    //since these two are identical (right now) we could use one function for both of these
     createInjectionDrawCall: function(_shader) {
-    this.drawCall = app.createDrawCall(_shader, this.createPointCloud(), PicoGL.POINTS);
+    this.injectionDrawCall = app.createDrawCall(_shader, this.createInjectionPointCloud(), PicoGL.POINTS);
         
-        return this.drawCall;
+        return this.injectionDrawCall;
+    },
+
+    createPropagationDrawCall: function(_shader) {
+        this.propagationDrawCall = app.createDrawCall(_shader, this.createInjectionPointCloud(), PicoGL.POINTS);
+
+        return this.propagationDrawCall;
     },
 
     createFramebuffer: function(_size) {
@@ -52,7 +59,7 @@ RSMPointCloud.prototype = {
             const rsmPositions = _RSMFrameBuffer.colorTextures[1];
             const rsmNormals = _RSMFrameBuffer.colorTextures[2];
 
-            if (this.drawCall && this.framebuffer) {
+            if (this.injectionDrawCall && this.framebuffer) {
                app.drawFramebuffer(this.framebuffer)
 	            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
 	            .depthTest()
@@ -60,7 +67,7 @@ RSMPointCloud.prototype = {
 	            .noBlend()
 	            .clear();
 
-                this.drawCall
+                this.injectionDrawCall
                 .texture('u_rsm_flux', rsmFlux)
                 .texture('u_rsm_world_positions', rsmPositions)
                 .texture('u_rsm_world_normals', rsmNormals)

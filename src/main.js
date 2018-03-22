@@ -209,7 +209,8 @@ function init() {
 	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
 	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
 	shaderLoader.addShaderProgram('shadowMapping', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
-	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_inject.vert.glsl', 'lpv/light_inject.frag.glsl');
+	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_injection.vert.glsl', 'lpv/light_injection.frag.glsl');
+	shaderLoader.addShaderProgram('lightPropagation', 'lpv/light_propagation.vert.glsl', 'lpv/light_propagation.frag.glsl');
 	shaderLoader.load(function(data) {
 
 		var fullscreenVertexArray = createFullscreenVertexArray();
@@ -218,7 +219,9 @@ function init() {
 		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
 
 		var lightInjectShader = makeShader('lightInjection', data);
+		var lightPropagationShader = makeShader('lightPropagation', data);
 		pointCloud.createInjectionDrawCall(lightInjectShader);
+		pointCloud.createPropagationDrawCall(lightPropagationShader);
 
 		var environmentShader = makeShader('environment', data);
 		environmentDrawCall = app.createDrawCall(environmentShader, fullscreenVertexArray)
@@ -234,7 +237,7 @@ function init() {
 		{
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 45, 0);
-			let t = vec3.fromValues(0, 1, 0);
+			let t = vec3.fromValues(-5, 1, 2.5);
 			let s = vec3.fromValues(0.06, 0.06, 0.06);
 			mat4.fromRotationTranslationScale(m, r, t, s);
 			loadObject('teapot/', 'teapot.obj', 'default.mtl', m);
@@ -449,8 +452,8 @@ function render() {
 		renderEnvironment(inverseViewProjection)
 
 		// Call this to get a debug render of the passed in texture
-		renderTextureToScreen(pointCloud.framebuffer.colorTextures[2]);
-		//renderTextureToScreen(shadowMapFramebuffer.colorTextures[0]);
+		renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
+		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[0]);
 
 	}
 	picoTimer.end();

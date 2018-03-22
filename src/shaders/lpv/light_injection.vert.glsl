@@ -27,8 +27,10 @@ flat out ivec3 v_grid_cell;
 
 ivec3 getGridCell(vec3 pos) 
 {
-	int halfGridSize = u_texture_size / 2;
-	return ivec3(pos / CELLSIZE) + ivec3(halfGridSize);
+	const vec3 center = vec3(0);
+	vec3 maxGridSize = vec3(u_texture_size);
+	vec3 min = center - vec3(maxGridSize * 0.5 * CELLSIZE);
+	return ivec3((pos - min) / CELLSIZE);
 }
 
 RSMTexel getRSMTexel(ivec2 texCoord) 
