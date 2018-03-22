@@ -218,7 +218,7 @@ function init() {
 		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
 
 		var lightInjectShader = makeShader('lightInjection', data);
-		pointCloud.createDrawCall(lightInjectShader);
+		pointCloud.createInjectionDrawCall(lightInjectShader);
 
 		var environmentShader = makeShader('environment', data);
 		environmentDrawCall = app.createDrawCall(environmentShader, fullscreenVertexArray)
@@ -439,7 +439,7 @@ function render() {
 		camera.update();
 
 		renderShadowMap();
-		pointCloud.render(shadowMapSmallFramebuffer);
+		pointCloud.lightInjection(shadowMapSmallFramebuffer);
 		renderScene();
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
