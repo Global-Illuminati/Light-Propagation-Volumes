@@ -67,6 +67,7 @@ RSMPointCloud.prototype = {
 	            .noBlend()
 	            .clear();
 
+               //rsmFlux[0][0] = vec2.create(); //(0,0) //gives errors
                 this.injectionDrawCall
                 .texture('u_rsm_flux', rsmFlux)
                 .texture('u_rsm_world_positions', rsmPositions)
@@ -78,6 +79,31 @@ RSMPointCloud.prototype = {
 	    	    //.uniform('u_view_from_world', camera.viewMatrix)
                 //.uniform('u_projection_from_view', camera.projectionMatrix)
                 .draw();
+            }
+        }
+    },
+
+    lightPropagation(_RSMFrameBuffer) {
+        if (_RSMFrameBuffer) {
+
+            const rsmFlux = _RSMFrameBuffer.colorTextures[0];
+            const rsmPositions = _RSMFrameBuffer.colorTextures[1];
+            const rsmNormals = _RSMFrameBuffer.colorTextures[2];
+
+            if (this.propagationDrawCall && this.framebuffer) {
+                app.drawFramebuffer(this.framebuffer)
+                    .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+                    .depthTest()
+                    .depthFunc(PicoGL.LEQUAL)
+                    .noBlend()
+                    .clear();
+
+                this.propagationDrawCall
+                    .texture('u_rsm_flux', rsmFlux)
+                    .texture('u_rsm_world_positions', rsmPositions)
+                    .texture('u_rsm_world_normals', rsmNormals)
+                    .uniform('u_texture_size', this.framebufferSize)
+                    .draw();
             }
         }
     }

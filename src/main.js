@@ -442,17 +442,18 @@ function render() {
 		camera.update();
 
 		renderShadowMap();
-		pointCloud.lightInjection(shadowMapSmallFramebuffer);
+		//pointCloud.lightInjection(shadowMapSmallFramebuffer);
+		//pointCloud.lightPropagation(shadowMapSmallFramebuffer);
 		renderScene();
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 		renderProbes(viewProjection);
 
 		var inverseViewProjection = mat4.invert(mat4.create(), viewProjection);
-		renderEnvironment(inverseViewProjection)
+		renderEnvironment(inverseViewProjection);
 
 		// Call this to get a debug render of the passed in texture
-		renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
+		//renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
 		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[0]);
 
 	}
