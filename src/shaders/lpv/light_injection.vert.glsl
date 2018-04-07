@@ -1,8 +1,6 @@
 #version 300 es
 precision highp float;
 
-#include <common.glsl>
-
 layout(location = 0) in vec2 a_point_position;
 
 uniform int u_texture_size;
