@@ -442,7 +442,7 @@ function render() {
 		camera.update();
 
 		renderShadowMap();
-		//pointCloud.lightInjection(shadowMapSmallFramebuffer);
+		pointCloud.lightInjection(shadowMapSmallFramebuffer);
 		//pointCloud.lightPropagation(shadowMapSmallFramebuffer);
 		renderScene();
 
@@ -572,7 +572,11 @@ function renderScene() {
 		.uniform('u_dir_light_color', directionalLight.color)
 		.uniform('u_dir_light_view_direction', dirLightViewDirection)
 		.uniform('u_light_projection_from_world', lightViewProjection)
+		.uniform('u_texture_size', pointCloud.framebufferSize)
 		.texture('u_shadow_map', shadowMap)
+		.texture('u_red_indirect_light', pointCloud.framebuffer.colorTextures[0])
+		.texture('u_green_indirect_light', pointCloud.framebuffer.colorTextures[1])
+		.texture('u_blue_indirect_light', pointCloud.framebuffer.colorTextures[2])
 		.draw();
 
 	}

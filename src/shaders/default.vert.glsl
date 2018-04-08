@@ -14,10 +14,14 @@ out vec3 v_tangent;
 out vec3 v_bitangent;
 out vec2 v_tex_coord;
 out vec4 v_light_space_position;
+out vec4 v_world_space_position;
+out vec3 v_world_space_normal;
 
 void main()
 {
 	mat4 view_from_local = u_view_from_world * u_world_from_local;
+
+	mat4 world_normal_matrix = transpose(inverse(u_world_from_local));
 
 	// NOTE: normal only works for uniformly scaled objects!
 	vec4 view_space_position = view_from_local * vec4(a_position, 1.0);
@@ -37,6 +41,8 @@ void main()
 	v_light_space_position = u_light_projection_from_world * vec4(world_space_position.xyz, 1.0);
 	v_light_space_position *= vec4(0.5, 0.5, 0.5, 1.0);
 	v_light_space_position += vec4(0.5, 0.5, 0.5, 0.0);
+	v_world_space_position = world_space_position;
+	v_world_space_normal = normalize(vec3(world_normal_matrix * vec4(a_normal,0.0)));
 
 	gl_Position = u_projection_from_view * view_space_position;
 
