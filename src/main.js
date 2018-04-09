@@ -37,9 +37,12 @@ var shadowMapFramebuffer;
 var shadowMapSmallSize = 512;
 var shadowMapSmallFramebuffer;
 
+var initLPV = false;
+
 var camera;
 var directionalLight;
 var meshes = [];
+var texturesLoaded = 0;
 
 var probeDrawCall;
 var probeLocations = [
@@ -97,7 +100,7 @@ function loadTexture(imageName, options) {
 
 		texture.resize(image.width, image.height);
 		texture.data(image);
-
+		texturesLoaded++;
 	};
 	image.src = 'assets/' + imageName;
 	return texture;
@@ -442,8 +445,12 @@ function render() {
 		camera.update();
 
 		renderShadowMap();
-		pointCloud.lightInjection(shadowMapSmallFramebuffer);
-		//pointCloud.lightPropagation(shadowMapSmallFramebuffer);
+		//only refresh LPV when shadowmap has been updated
+		if(initLPV) {
+			pointCloud.lightInjection(shadowMapSmallFramebuffer);
+			//pointCloud.lightPropagation(shadowMapSmallFramebuffer);
+			initLPV = false;
+		}
 		renderScene();
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
@@ -477,8 +484,10 @@ function shadowMapNeedsRendering() {
 
 	var lastDirection = shadowMapNeedsRendering.lastDirection || vec3.create();
 	var lastMeshCount = shadowMapNeedsRendering.lastMeshCount || 0;
+	var lastTexturesLoaded = shadowMapNeedsRendering.lastTexturesLoaded || 0;
 
-	if (vec3.equals(lastDirection, directionalLight.direction) && lastMeshCount === meshes.length) {
+	if (vec3.equals(lastDirection, directionalLight.direction) && lastMeshCount === meshes.length 
+		&& lastTexturesLoaded == texturesLoaded) {
 
 		return false;
 
@@ -486,15 +495,16 @@ function shadowMapNeedsRendering() {
 
 		shadowMapNeedsRendering.lastDirection = vec3.copy(lastDirection, directionalLight.direction);
 		shadowMapNeedsRendering.lastMeshCount = meshes.length;
+		shadowMapNeedsRendering.lastTexturesLoaded = texturesLoaded;
 
 		return true;
 
 	}
-
-
 }
 
 function renderShadowMap() {
+//TODO: only render when needed to
+if (!shadowMapNeedsRendering()) return;
 
 	if (!directionalLight) return;
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
@@ -521,8 +531,6 @@ function renderShadowMap() {
 
 	}
 
-	//TODO: only render when needed to
-	if (!shadowMapNeedsRendering()) return;
 
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
 	var lightViewDirection = directionalLight.viewSpaceDirection(camera);
@@ -547,6 +555,7 @@ function renderShadowMap() {
 		.draw();
 
 	}
+	initLPV = true;
 }
 
 function renderScene() {

@@ -143,7 +143,7 @@ void main()
 
 	// output tangents
 	#ifdef DEBUG_LPV
-		o_color = vec4(lpv_radiance, 1.0);
+		o_color = vec4(lpv_radiance, 1.0) * 3.0;
 	#else
 		o_color = vec4(color, 1.0);
 	#endif
