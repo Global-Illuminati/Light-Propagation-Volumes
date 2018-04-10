@@ -44,17 +44,46 @@ uniform sampler2D u_blue_indirect_light;
 
 layout(location = 0) out vec4 o_color;
 
-ivec3 getGridCell(vec3 pos) 
+vec4 texture_trilinear(in sampler2D t, vec3 texCoord) {
+	ivec3 x0y0z0 = ivec3(floor(texCoord.x), floor(texCoord.y), floor(texCoord.z));
+	ivec2 fetchCoords = ivec2(x0y0z0.x + x0y0z0.z * u_texture_size, x0y0z0.y);
+
+	vec4 bl1 = texelFetch(t, fetchCoords, 0);
+	vec4 br1 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
+
+	vec4 tl1 = texelFetch(t, fetchCoords + ivec2(0,1), 0);
+	vec4 tr1 = texelFetch(t, fetchCoords + ivec2(1,1), 0);
+
+	vec4 b1 = mix(bl1, br1, texCoord.x - float(x0y0z0.x));
+	vec4 t1 = mix(tl1, tr1, texCoord.x - float(x0y0z0.x));
+	vec4 r1 = mix(b1, t1, texCoord.y - float(x0y0z0.y));
+
+	fetchCoords = ivec2(x0y0z0.x + (x0y0z0.z + 1) * u_texture_size, x0y0z0.y);
+
+	vec4 bl2 = texelFetch(t, fetchCoords, 0);
+	vec4 br2 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
+
+	vec4 tl2 = texelFetch(t, fetchCoords + ivec2(0,1), 0);
+	vec4 tr2 = texelFetch(t, fetchCoords + ivec2(1,1), 0);
+
+	vec4 b2 = mix(bl2, br2, texCoord.x - float(x0y0z0.x));
+	vec4 t2 = mix(tl2, tr2, texCoord.x - float(x0y0z0.x));
+	vec4 r2 = mix(b1, t1, texCoord.y - float(x0y0z0.y));
+
+	return mix(r1, r2, texCoord.z - float(x0y0z0.z));
+}
+
+vec3 getGridCell(vec3 pos) 
 {
 	const vec3 center = vec3(0);
 	vec3 maxGridSize = vec3(u_texture_size);
 	vec3 min = center - vec3(maxGridSize * 0.5 * CELLSIZE);
-	return ivec3((pos - min) / CELLSIZE);
+	return vec3((pos - min) / CELLSIZE);
 }
-
+/*
 vec2 getGridTexCoord(vec3 pos)
 {
-	ivec3 gridCell = getGridCell(pos);
+	vec3 gridCell = getGridCell(pos);
 	float f_texture_size = float(u_texture_size);
 	//displace int coordinates with 0.5
 	vec2 texCoords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
@@ -62,7 +91,7 @@ vec2 getGridTexCoord(vec3 pos)
 	vec2 texCoord = vec2((texCoords.x) / (f_texture_size * f_texture_size), (texCoords.y) / f_texture_size);
 	return texCoord;
 }
-
+*/
 // Get SH coefficients out of direction
 vec4 dirToSH(vec3 dir)
 {
@@ -71,18 +100,19 @@ vec4 dirToSH(vec3 dir)
 
 vec3 getLPVIntensity()
 {
-	vec2 gridTexCoord = getGridTexCoord(v_world_space_position.xyz);
+	//vec2 gridTexCoord = getGridTexCoord(v_world_space_position.xyz);
 	vec4 shIntensity = dirToSH(-v_world_space_normal);
+	vec3 gridCell = getGridCell(v_world_space_position.xyz);
 
-	vec4 redLight = texture(u_red_indirect_light, gridTexCoord);
-	vec4 greenLight = texture(u_green_indirect_light, gridTexCoord);
-	vec4 blueLight = texture(u_blue_indirect_light, gridTexCoord);
+	vec4 redLight = texture_trilinear(u_red_indirect_light, gridCell);
+	vec4 greenLight = texture_trilinear(u_green_indirect_light, gridCell);
+	vec4 blueLight = texture_trilinear(u_blue_indirect_light, gridCell);
 
 	//dot with sh coeffiencients to get directioal light intesity from the normal
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
 }
 
-//#define DEBUG_LPV
+#define DEBUG_LPV
 
 void main()
 {
@@ -144,7 +174,7 @@ void main()
 
 	// output tangents
 	#ifdef DEBUG_LPV
-		o_color = vec4(lpv_radiance, 1.0) * 3.0;
+		o_color = vec4(lpv_radiance, 1.0);
 	#else
 		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0);
 	#endif

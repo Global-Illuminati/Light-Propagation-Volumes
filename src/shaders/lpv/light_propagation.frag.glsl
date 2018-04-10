@@ -122,6 +122,19 @@ void propagate() {
 
 void main()
 {
+    neighbours = ivec2[] (
+        //x
+        ivec2(1,0),
+        ivec2(-1,0),
+
+        //y
+        ivec2(0,1),
+        ivec2(0,-1),
+
+        //z
+        ivec2(u_grid_size, 0),
+        ivec2(-u_grid_size, 0)
+    );
     propagate();
 
     o_red_color += red_contribution;
