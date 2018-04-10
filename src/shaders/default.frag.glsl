@@ -3,7 +3,7 @@ precision highp float;
 
 #include <common.glsl>
 
-#define CELLSIZE 4.0
+#define CELLSIZE 2.0
 
 #define SH_C0 0.282094791f // 1 / 2sqrt(pi)
 #define SH_C1 0.488602512f // sqrt(3/pi) / 2
@@ -86,9 +86,6 @@ vec3 getLPVIntensity()
 
 void main()
 {
-	vec3 lpv_intensity = getLPVIntensity();
-	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b));
-
 	vec3 N = normalize(v_normal);
 	vec3 T = normalize(v_tangent);
 	vec3 B = normalize(v_bitangent);
@@ -106,6 +103,10 @@ void main()
 
 	vec3 diffuse = texture(u_diffuse_map, v_tex_coord).rgb;
 	float shininess = texture(u_specular_map, v_tex_coord).r;
+
+	vec3 lpv_intensity = getLPVIntensity();
+	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b));
+	vec3 indirect_light = diffuse * lpv_radiance;
 
 	vec3 wi = normalize(-u_dir_light_view_direction);
 	vec3 wo = normalize(-v_position);
@@ -145,7 +146,7 @@ void main()
 	#ifdef DEBUG_LPV
 		o_color = vec4(lpv_radiance, 1.0) * 3.0;
 	#else
-		o_color = vec4(color, 1.0);
+		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0);
 	#endif
 
 }

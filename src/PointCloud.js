@@ -1,6 +1,6 @@
 function RSMPointCloud(_size) {
     this.size = _size || 4096;
-    this.framebuffer = this.createFramebuffer(32);
+    this.framebuffer = this.createFramebuffer(128);
 }
 
 RSMPointCloud.prototype = {
