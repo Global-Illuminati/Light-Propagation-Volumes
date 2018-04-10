@@ -46,7 +46,7 @@ layout(location = 0) out vec4 o_color;
 
 vec4 texture_trilinear(in sampler2D t, vec3 texCoord) {
 	ivec3 x0y0z0 = ivec3(floor(texCoord.x), floor(texCoord.y), floor(texCoord.z));
-	ivec2 fetchCoords = ivec2(x0y0z0.x + x0y0z0.z * u_texture_size, x0y0z0.y);
+	ivec2 fetchCoords = ivec2(x0y0z0.x + (x0y0z0.z * u_texture_size), x0y0z0.y);
 
 	vec4 bl1 = texelFetch(t, fetchCoords, 0);
 	vec4 br1 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
@@ -58,7 +58,7 @@ vec4 texture_trilinear(in sampler2D t, vec3 texCoord) {
 	vec4 t1 = mix(tl1, tr1, texCoord.x - float(x0y0z0.x));
 	vec4 r1 = mix(b1, t1, texCoord.y - float(x0y0z0.y));
 
-	fetchCoords = ivec2(x0y0z0.x + (x0y0z0.z + 1) * u_texture_size, x0y0z0.y);
+	fetchCoords = ivec2(x0y0z0.x + ((x0y0z0.z + 1) * u_texture_size), x0y0z0.y);
 
 	vec4 bl2 = texelFetch(t, fetchCoords, 0);
 	vec4 br2 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
@@ -68,7 +68,7 @@ vec4 texture_trilinear(in sampler2D t, vec3 texCoord) {
 
 	vec4 b2 = mix(bl2, br2, texCoord.x - float(x0y0z0.x));
 	vec4 t2 = mix(tl2, tr2, texCoord.x - float(x0y0z0.x));
-	vec4 r2 = mix(b1, t1, texCoord.y - float(x0y0z0.y));
+	vec4 r2 = mix(b2, t2, texCoord.y - float(x0y0z0.y));
 
 	return mix(r1, r2, texCoord.z - float(x0y0z0.z));
 }
