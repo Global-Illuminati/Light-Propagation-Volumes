@@ -1,6 +1,8 @@
-function RSMPointCloud(_size) {
+function RSMPointCloud(_size, _LPVGridSize) {
     this.size = _size || 4096;
-    this.framebuffer = this.createFramebuffer(32);
+    this.framebufferSize = _LPVGridSize || 128;
+    this.injectionFramebuffer = this.createFramebuffer(this.framebufferSize);
+    this.propagationFramebuffer = this.createFramebuffer(this.framebufferSize);
 }
 
 RSMPointCloud.prototype = {
@@ -57,10 +59,9 @@ RSMPointCloud.prototype = {
     },
 
     createFramebuffer: function(_size) {
-        this.framebufferSize = _size || 32;
-        const redBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
-        const greenBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
-        const blueBuffer = app.createTexture2D(this.framebufferSize * this.framebufferSize, this.framebufferSize);
+        const redBuffer = app.createTexture2D(_size * _size, _size);
+        const greenBuffer = app.createTexture2D(_size * _size, _size);
+        const blueBuffer = app.createTexture2D(_size * _size, _size);
 
         const framebuffer = app.createFramebuffer()
         .colorTarget(0, redBuffer)
@@ -78,8 +79,8 @@ RSMPointCloud.prototype = {
             const rsmPositions = _RSMFrameBuffer.colorTextures[1];
             const rsmNormals = _RSMFrameBuffer.colorTextures[2];
 
-            if (this.injectionDrawCall && this.framebuffer) {
-               app.drawFramebuffer(this.framebuffer)
+            if (this.injectionDrawCall && this.injectionFramebuffer) {
+               app.drawFramebuffer(this.injectionFramebuffer)
 	            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
 	            .depthTest()
 	            .depthFunc(PicoGL.LEQUAL)
@@ -105,8 +106,8 @@ RSMPointCloud.prototype = {
     },
 
     lightPropagation() {
-        if (this.propagationDrawCall && this.framebuffer && this.injectionFinished) {
-            app.drawFramebuffer(this.framebuffer)
+        if (this.propagationDrawCall && this.injectionFramebuffer && this.propagationFramebuffer && this.injectionFinished) {
+            app.drawFramebuffer(this.propagationFramebuffer)
                 .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
                 .depthTest()
                 .depthFunc(PicoGL.LEQUAL)
@@ -114,9 +115,9 @@ RSMPointCloud.prototype = {
                 .clear();
 
             this.propagationDrawCall
-                //.texture('u_red_contribution', this.framebuffer.colorTextures[0])
-                //.texture('u_green_contribution', this.framebuffer.colorTextures[1])
-                //.texture('u_blue_contribution', this.framebuffer.colorTextures[2])
+                .texture('u_red_contribution', this.injectionFramebuffer.colorTextures[0])
+                .texture('u_green_contribution', this.injectionFramebuffer.colorTextures[1])
+                .texture('u_blue_contribution', this.injectionFramebuffer.colorTextures[2])
                 .uniform('u_grid_size', this.framebufferSize)
                 .draw();
         }

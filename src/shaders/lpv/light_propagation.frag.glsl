@@ -10,71 +10,47 @@ precision highp float;
 #define SH_cosLobe_C0 0.886226925f // sqrt(pi)/2
 #define SH_cosLobe_C1 1.02332671f // sqrt(pi/3)
 
-#define CELLSIZE 4.0
+#define CELLSIZE 1.0
 
 uniform highp int u_grid_size;
+
+uniform sampler2D u_red_contribution;
+uniform sampler2D u_green_contribution;
+uniform sampler2D u_blue_contribution;
+
+flat in ivec2 v_cell_index;
 
 layout(location = 0) out vec4 o_red_color;
 layout(location = 1) out vec4 o_green_color;
 layout(location = 2) out vec4 o_blue_color;
 
-ivec3 directions[6] = ivec3[] (
-  ivec3(0,0,1),
-  ivec3(0,0,-1),
-  ivec3(1,0,0),
-  ivec3(-1,0,0),
-  ivec3(0,1,0),
-  ivec3(0,-1,0)
+//3d directions needed for sh calculations
+const vec3 directions[6] = vec3[] (
+	//x
+	vec3(1.0,0.0,0.0),
+	vec3(-1.0,0.0,0.0),
+    //y
+	vec3(0.0,1.0,0.0),
+	vec3(0.0,-1.0,0.0),
+    //z
+    vec3(0.0,0.0,1.0),
+	vec3(0.0,0.0,-1.0)
 );
 
-/* 6 neighbours in 3D, 4 in 2D, represented as
-   orientation = [ right | up | forward ] = [ x | y | z ]
- */
-mat3 neighbours[6] = mat3[] (
-    // Z+
-    mat3(
-    1, 0, 0,
-    0, 1, 0,
-    0, 0, 1),    //These two are for 3D
-    // Z-
-    mat3(
-    -1, 0, 0,
-    0, 1, 0,
-    0, 0, -1),
-    // X+
-    mat3(
-    0, 0, 1,
-    0, 1, 0,
-    -1, 0, 0),
-    // X-
-    mat3(
-    0, 0, -1,
-    0, 1, 0,
-    1, 0, 0),
-    // Y+
-    mat3(
-    1, 0, 0,
-    0, 0, 1,
-    0, -1, 0),
-    // Y-
-    mat3(
-    1, 0, 0,
-    0, 0, -1,
-    0, 1, 0)
-);
+//6 neighbours in our flattened representation of the 3d grid
+//later defined during runtime
+ivec2 neighbours[6];
 
 // Faces in cube
-vec2 sideFaces[4] = vec2[] (
-    vec2(1.0, 0.0),   // right
-    vec2(0.0, 1.0),   // up
-    vec2(-1.0, 0.0),  // left
-    vec2(0.0, -1.0)   // down
+const ivec2 sideFaces[4] = ivec2[](
+    ivec2(1, 0),   // right
+    ivec2(0, 1),   // up
+    ivec2(-1, 0),  // left
+    ivec2(0, -1)   // down
 );
 
 vec4 evalCosineLobeToDir(vec3 dir)
 {
-	dir = normalize(dir);
-	//f00, f-11, f01, f11
 	return vec4(SH_cosLobe_C0, -SH_cosLobe_C1 * dir.y, SH_cosLobe_C1 * dir.z, -SH_cosLobe_C1 * dir.x);
 }
 
@@ -84,82 +60,70 @@ vec4 dirToSH(vec3 dir)
     return vec4(SH_C0, -SH_C1 * dir.y, SH_C1 * dir.z, -SH_C1 * dir.x);
 }
 
-vec3 getEvalSideDirection(int index, mat3 orientation)
+vec3 getEvalSideDirection(int index, vec3 orientation)
 {
     const float smallComponent = 0.4472135; // 1 / sqrt(5)
     const float bigComponent = 0.894427; // 2 / sqrt(5)
 
-    vec2 s = sideFaces[index];
-    return orientation * vec3(s.x * smallComponent, s.y * smallComponent, bigComponent);
+    vec2 current_side = vec2(sideFaces[index]);
+    return orientation * vec3(current_side.x * smallComponent, current_side.y * smallComponent, bigComponent);
 }
 
-vec3 getReprojSideDirection(int index, mat3 orientation)
+vec3 getReprojSideDirection(int index, vec3 orientation)
 {
-    vec2 s = sideFaces[index];
-    return orientation * vec3(s.x, s.y, 0);
+    ivec2 current_side = sideFaces[index];
+    return orientation * vec3(current_side.x, current_side.y, 0);
 }
 
-// Should be run 16*2*1 times? (x,y,z)
-// For each cell
+vec4 new_red_contribution = vec4(0.0);
+vec4 new_green_contribution = vec4(0.0);
+vec4 new_blue_contribution = vec4(0.0);
+
+void propagate() {
+    for(int neighbour = 0; neighbour < neighbours.length(); neighbour++)
+    {
+        vec4 red_contribution_neighbour = vec4(0.0);
+        vec4 green_contribution_neighbour = vec4(0.0);
+        vec4 blue_contribution_neighbour = vec4(0.0);
+
+        ivec2 offset_flattened = neighbours[neighbour];
+        vec3 offset = directions[neighbour];
+
+        ivec2 neighbour_index = v_cell_index - offset_flattened;
+
+        red_contribution_neighbour = texelFetch(u_red_contribution, neighbour_index, 0);
+        green_contribution_neighbour = texelFetch(u_green_contribution, neighbour_index, 0);
+        blue_contribution_neighbour = texelFetch(u_blue_contribution, neighbour_index, 0);
+
+        vec4 offset_cosine_lobe = evalCosineLobeToDir(offset);
+        vec4 offset_spherical_harmonic = dirToSH(offset);
+
+        new_red_contribution += max(0.0, dot( red_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
+        new_green_contribution += max(0.0, dot( green_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
+        new_blue_contribution += max(0.0, dot( blue_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
+
+        for(int face = 0; face < 4; face++)
+        {
+            vec3 eval_direction = getEvalSideDirection(face, offset);
+
+            vec3 reproj_direction = getReprojSideDirection(face, offset);
+
+            vec4 reproj_direction_cosine_lobe = evalCosineLobeToDir( reproj_direction );
+			vec4 eval_direction_spherical_harmonic = dirToSH( eval_direction );
+			
+		    new_red_contribution += max(0.0, dot( red_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+			new_green_contribution += max(0.0, dot( green_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+			new_blue_contribution += max(0.0, dot( blue_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+        }
+    }
+}
+
+
 void main()
 {
-    /*
-    // TODO correct indexes from lpv
-    int cellX = 0;
-    int cellY = 0;
-    ivec3 cellIndex = ivec3(cellX, cellY, 0);
+    propagate();
 
-    vec4 contributionR = vec4(0);
-    vec4 contributionG = vec4(0);
-    vec4 contributionB = vec4(0);
-
-    // Get contribution of neighbouring cells
-    for (int neighbour = 0; neighbour < neighbours.length(); ++neighbour)
-    {
-        mat3 orientation = neighbours[neighbour];
-        vec3 mainDirection = orientation * vec3(0, 0, 1);
-
-        ivec3 neighbourIndex = ivec3(cellIndex - directions[neighbour]);
-
-        // TODO these might be incorrect
-        vec4 neighbourCoeffsR = vec4(1.0);//texelFetch(u_rsm_flux, neighbourIndex.xy, 0);
-        vec4 neighbourCoeffsG = vec4(1.0);//texelFetch(u_rsm_world_positions, neighbourIndex.xy, 0);
-        vec4 neighbourCoeffsB = vec4(1.0);//texelFetch(u_rsm_world_normals, neighbourIndex.xy, 0);
-
-        // The solid angles determine the amount of light distributed toward a specific face
-        const float directFaceSolidAngle = 0.4006696846f / PI / 2.0f;
-        const float sideFaceSolidAngle = 0.4234413544f / PI / 3.0f;
-
-        // For each face of cell, project light onto face
-        for (int sideFace = 0; sideFace < sideFaces.length(); ++sideFace)
-        {
-            vec3 evalDirection = getEvalSideDirection(sideFace, orientation);
-            vec3 reprojDirection = getReprojSideDirection(sideFace, orientation);
-
-            vec4 reprojDirectionCosineLobeSH = evalCosineLobeToDir(reprojDirection);
-            vec4 evalDirectionSH = dirToSH(evalDirection);
-
-            contributionR += sideFaceSolidAngle * dot(neighbourCoeffsR, evalDirectionSH) * reprojDirectionCosineLobeSH;
-            contributionG += sideFaceSolidAngle * dot(neighbourCoeffsG, evalDirectionSH) * reprojDirectionCosineLobeSH;
-            contributionB += sideFaceSolidAngle * dot(neighbourCoeffsB, evalDirectionSH) * reprojDirectionCosineLobeSH;
-        }
-
-        ivec3 dir = directions[neighbour];
-        vec4 cosLobe = evalCosineLobeToDir(vec3(dir));
-        vec4 dirSH = dirToSH(vec3(dir));
-
-        contributionR += directFaceSolidAngle * max(0.0f, dot(neighbourCoeffsR, dirSH)) * cosLobe;
-        contributionG += directFaceSolidAngle * max(0.0f, dot(neighbourCoeffsG, dirSH)) * cosLobe;
-        contributionB += directFaceSolidAngle * max(0.0f, dot(neighbourCoeffsB, dirSH)) * cosLobe;
-    }
-
-    // Add contributions of neighbours to this cell
-    // This does not work in WebGL
-    /*texelFetch(u_rsm_flux, cellIndex.xy, 0) += contributionR;
-    texelFetch(u_rsm_world_positions, cellIndex.xy, 0) += contributionG;
-    texelFetch(u_rsm_world_normals, cellIndex.xy, 0) += contributionB;*/
-
-    o_red_color = vec4(1.0,0.0,0.0,1.0);
-    o_green_color = vec4(0.0,1.0,0.0,1.0);
-    o_blue_color = vec4(0.0,0.0,1.0,1.0);
+    o_red_color += new_red_contribution;
+    o_green_color += new_green_contribution;
+    o_blue_color += new_blue_contribution;
 }

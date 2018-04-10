@@ -451,7 +451,7 @@ function render() {
 			pointCloud.lightPropagation(shadowMapSmallFramebuffer);
 			initLPV = false;
 		}
-		renderScene();
+		renderScene(pointCloud.propagationFramebuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 		renderProbes(viewProjection);
@@ -460,7 +460,8 @@ function render() {
 		renderEnvironment(inverseViewProjection);
 
 		// Call this to get a debug render of the passed in texture
-		renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
+		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
+		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[0]);
 
 	}
@@ -558,7 +559,7 @@ if (!shadowMapNeedsRendering()) return;
 	initLPV = true;
 }
 
-function renderScene() {
+function renderScene(framebuffer) {
 
 	var dirLightViewDirection = directionalLight.viewSpaceDirection(camera);
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
@@ -571,8 +572,7 @@ function renderScene() {
 	.noBlend();
 	//.clear();
 
-	for (var i = 0, len = meshes.length; i < len; ++i) {
-
+	for (var i = 0, len = meshes.length; i < len; ++i) { 
 		var mesh = meshes[i];
 		mesh.drawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
@@ -583,9 +583,9 @@ function renderScene() {
 		.uniform('u_light_projection_from_world', lightViewProjection)
 		.uniform('u_texture_size', pointCloud.framebufferSize)
 		.texture('u_shadow_map', shadowMap)
-		.texture('u_red_indirect_light', pointCloud.framebuffer.colorTextures[0])
-		.texture('u_green_indirect_light', pointCloud.framebuffer.colorTextures[1])
-		.texture('u_blue_indirect_light', pointCloud.framebuffer.colorTextures[2])
+		.texture('u_red_indirect_light', framebuffer.colorTextures[0])
+		.texture('u_green_indirect_light', framebuffer.colorTextures[1])
+		.texture('u_blue_indirect_light', framebuffer.colorTextures[2])
 		.draw();
 
 	}

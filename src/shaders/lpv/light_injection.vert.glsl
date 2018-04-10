@@ -12,7 +12,7 @@ uniform sampler2D u_rsm_flux;
 uniform sampler2D u_rsm_world_positions;
 uniform sampler2D u_rsm_world_normals;
 
-#define CELLSIZE 2.0
+#define CELLSIZE 1.0
 
 struct RSMTexel 
 {

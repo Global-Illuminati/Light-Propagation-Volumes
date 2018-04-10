@@ -3,7 +3,7 @@ precision highp float;
 
 #include <common.glsl>
 
-#define CELLSIZE 2.0
+#define CELLSIZE 1.0
 
 #define SH_C0 0.282094791f // 1 / 2sqrt(pi)
 #define SH_C1 0.488602512f // sqrt(3/pi) / 2
@@ -82,7 +82,7 @@ vec3 getLPVIntensity()
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
 }
 
-#define DEBUG_LPV
+//#define DEBUG_LPV
 
 void main()
 {
@@ -105,7 +105,7 @@ void main()
 	float shininess = texture(u_specular_map, v_tex_coord).r;
 
 	vec3 lpv_intensity = getLPVIntensity();
-	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b));
+	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b)) / PI;
 	vec3 indirect_light = diffuse * lpv_radiance;
 
 	vec3 wi = normalize(-u_dir_light_view_direction);
