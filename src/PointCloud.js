@@ -8,6 +8,7 @@ function RSMPointCloud(_size, _LPVGridSize) {
 RSMPointCloud.prototype = {
     constructor: RSMPointCloud,
 
+    //One point per pixel
     createInjectionPointCloud: function() {
         const positionData = new Float32Array(this.size * this.size * 2);
 
@@ -27,6 +28,7 @@ RSMPointCloud.prototype = {
         return pointArray;
     },
 
+    //One point per grid cell
     createPropagationPointCloud: function() {
         const positionData = new Float32Array(this.framebufferSize * this.framebufferSize * this.framebufferSize * 2);
         let positionIndex = 0;
@@ -45,7 +47,6 @@ RSMPointCloud.prototype = {
         return pointArray;
     },
 
-    //since these two are identical (right now) we could use one function for both of these
     createInjectionDrawCall: function(_shader) {
     this.injectionDrawCall = app.createDrawCall(_shader, this.createInjectionPointCloud(), PicoGL.POINTS);
         
@@ -94,10 +95,6 @@ RSMPointCloud.prototype = {
                 .texture('u_rsm_world_normals', rsmNormals)
                 .uniform('u_rsm_size', this.size)
                 .uniform('u_texture_size', this.framebufferSize)
-                //.uniform('u_light_direction', directionalLight.direction)
-                //.uniform('u_world_from_local', mat4.create())
-	    	    //.uniform('u_view_from_world', camera.viewMatrix)
-                //.uniform('u_projection_from_view', camera.projectionMatrix)
                 .draw();
 
                 this.injectionFinished = true;
@@ -106,6 +103,7 @@ RSMPointCloud.prototype = {
     },
 
     lightPropagation() {
+        // Check if injection has been done
         if (this.propagationDrawCall && this.injectionFramebuffer && this.propagationFramebuffer && this.injectionFinished) {
             app.drawFramebuffer(this.propagationFramebuffer)
                 .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
@@ -114,6 +112,7 @@ RSMPointCloud.prototype = {
                 .noBlend()
                 .clear();
 
+            //Take injection cloud as input and propagate
             this.propagationDrawCall
                 .texture('u_red_contribution', this.injectionFramebuffer.colorTextures[0])
                 .texture('u_green_contribution', this.injectionFramebuffer.colorTextures[1])

@@ -24,25 +24,29 @@ layout(location = 0) out vec4 o_red_color;
 layout(location = 1) out vec4 o_green_color;
 layout(location = 2) out vec4 o_blue_color;
 
-//3d directions needed for sh calculations
+vec4 red_contribution = vec4(0.0);
+vec4 green_contribution = vec4(0.0);
+vec4 blue_contribution = vec4(0.0);
+
+// 3D directions needed for SH calculations
 const vec3 directions[6] = vec3[] (
 	//x
-	vec3(1.0,0.0,0.0),
-	vec3(-1.0,0.0,0.0),
+	vec3(1.0, 0.0, 0.0),
+	vec3(-1.0, 0.0, 0.0),
     //y
-	vec3(0.0,1.0,0.0),
-	vec3(0.0,-1.0,0.0),
+	vec3(0.0, 1.0, 0.0),
+	vec3(0.0, -1.0, 0.0),
     //z
-    vec3(0.0,0.0,1.0),
-	vec3(0.0,0.0,-1.0)
+    vec3(0.0, 0.0, 1.0),
+	vec3(0.0, 0.0, -1.0)
 );
 
-//6 neighbours in our flattened representation of the 3d grid
-//later defined during runtime
+// 6 neighbours in our flattened representation of the 3D grid
+// later defined during runtime
 ivec2 neighbours[6];
 
 // Faces in cube
-const ivec2 sideFaces[4] = ivec2[](
+const ivec2 sideFaces[4] = ivec2[] (
     ivec2(1, 0),   // right
     ivec2(0, 1),   // up
     ivec2(-1, 0),  // left
@@ -75,11 +79,9 @@ vec3 getReprojSideDirection(int index, vec3 orientation)
     return orientation * vec3(current_side.x, current_side.y, 0);
 }
 
-vec4 new_red_contribution = vec4(0.0);
-vec4 new_green_contribution = vec4(0.0);
-vec4 new_blue_contribution = vec4(0.0);
-
 void propagate() {
+
+    // Add contributions of neighbours to this cell
     for(int neighbour = 0; neighbour < neighbours.length(); neighbour++)
     {
         vec4 red_contribution_neighbour = vec4(0.0);
@@ -89,7 +91,7 @@ void propagate() {
         ivec2 offset_flattened = neighbours[neighbour];
         vec3 offset = directions[neighbour];
 
-        ivec2 neighbour_index = v_cell_index - offset_flattened;
+        ivec2 neighbour_index = v_cell_index;
 
         red_contribution_neighbour = texelFetch(u_red_contribution, neighbour_index, 0);
         green_contribution_neighbour = texelFetch(u_green_contribution, neighbour_index, 0);
@@ -98,32 +100,31 @@ void propagate() {
         vec4 offset_cosine_lobe = evalCosineLobeToDir(offset);
         vec4 offset_spherical_harmonic = dirToSH(offset);
 
-        new_red_contribution += max(0.0, dot( red_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
-        new_green_contribution += max(0.0, dot( green_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
-        new_blue_contribution += max(0.0, dot( blue_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
+        red_contribution += max(0.0, dot( red_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
+        green_contribution += max(0.0, dot( green_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
+        blue_contribution += max(0.0, dot( blue_contribution_neighbour, offset_spherical_harmonic)) * offset_cosine_lobe;
 
-        for(int face = 0; face < 4; face++)
+        // Add contributions of faces of neighbour
+        for(int face = 0; face < sideFaces.length(); face++)
         {
             vec3 eval_direction = getEvalSideDirection(face, offset);
-
             vec3 reproj_direction = getReprojSideDirection(face, offset);
 
             vec4 reproj_direction_cosine_lobe = evalCosineLobeToDir( reproj_direction );
 			vec4 eval_direction_spherical_harmonic = dirToSH( eval_direction );
 			
-		    new_red_contribution += max(0.0, dot( red_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
-			new_green_contribution += max(0.0, dot( green_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
-			new_blue_contribution += max(0.0, dot( blue_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+		    red_contribution += max(0.0, dot( red_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+			green_contribution += max(0.0, dot( green_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+			blue_contribution += max(0.0, dot( blue_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
         }
     }
 }
-
 
 void main()
 {
     propagate();
 
-    o_red_color += new_red_contribution;
-    o_green_color += new_green_contribution;
-    o_blue_color += new_blue_contribution;
+    o_red_color += red_contribution;
+    o_green_color += green_contribution;
+    o_blue_color += blue_contribution;
 }

@@ -4,12 +4,10 @@ precision highp float;
 layout (location = 0) in vec2 a_cell_index;
 
 uniform highp int u_grid_size;
-
 flat out ivec2 v_cell_index;
 
 vec2 get_grid_output_position() {
-    //offset position to middle of texel
-    vec2 offsetPosition = a_cell_index + vec2(0.5);
+    vec2 offsetPosition = a_cell_index + vec2(0.5); //offset position to middle of texel
     float f_grid_size = float(u_grid_size);
 
     return vec2((2.0 * offsetPosition.x) / (f_grid_size * f_grid_size), (2.0 * offsetPosition.y) / f_grid_size) - vec2(1.0);
