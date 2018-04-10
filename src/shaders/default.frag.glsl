@@ -82,7 +82,7 @@ vec3 getLPVIntensity()
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
 }
 
-//#define DEBUG_LPV
+#define DEBUG_LPV
 
 void main()
 {

@@ -1,6 +1,6 @@
 function RSMPointCloud(_size) {
     this.size = _size || 4096;
-    this.framebuffer = this.createFramebuffer(128);
+    this.framebuffer = this.createFramebuffer(32);
 }
 
 RSMPointCloud.prototype = {
@@ -25,6 +25,24 @@ RSMPointCloud.prototype = {
         return pointArray;
     },
 
+    createPropagationPointCloud: function() {
+        const positionData = new Float32Array(this.framebufferSize * this.framebufferSize * this.framebufferSize * 2);
+        let positionIndex = 0;
+        for(let x = 0; x < this.framebufferSize * this.framebufferSize; x++) {
+            for(let y = 0; y < this.framebufferSize; y++) {
+                positionData[positionIndex++] = x;
+                positionData[positionIndex++] = y;
+            }
+        }
+
+        const pointPositions = app.createVertexBuffer(PicoGL.FLOAT, 2, positionData);
+
+        const pointArray = app.createVertexArray()
+        .vertexAttributeBuffer(0, pointPositions);
+
+        return pointArray;
+    },
+
     //since these two are identical (right now) we could use one function for both of these
     createInjectionDrawCall: function(_shader) {
     this.injectionDrawCall = app.createDrawCall(_shader, this.createInjectionPointCloud(), PicoGL.POINTS);
@@ -33,7 +51,7 @@ RSMPointCloud.prototype = {
     },
 
     createPropagationDrawCall: function(_shader) {
-        this.propagationDrawCall = app.createDrawCall(_shader, this.createInjectionPointCloud(), PicoGL.POINTS);
+        this.propagationDrawCall = app.createDrawCall(_shader, this.createPropagationPointCloud(), PicoGL.POINTS);
 
         return this.propagationDrawCall;
     },
@@ -53,8 +71,9 @@ RSMPointCloud.prototype = {
     },
 
     lightInjection(_RSMFrameBuffer) {
+        this.injectionFinished = false;
+
         if(_RSMFrameBuffer) {
-            
             const rsmFlux = _RSMFrameBuffer.colorTextures[0];
             const rsmPositions = _RSMFrameBuffer.colorTextures[1];
             const rsmNormals = _RSMFrameBuffer.colorTextures[2];
@@ -79,32 +98,27 @@ RSMPointCloud.prototype = {
 	    	    //.uniform('u_view_from_world', camera.viewMatrix)
                 //.uniform('u_projection_from_view', camera.projectionMatrix)
                 .draw();
+
+                this.injectionFinished = true;
             }
         }
     },
 
-    lightPropagation(_RSMFrameBuffer) {
-        if (_RSMFrameBuffer) {
+    lightPropagation() {
+        if (this.propagationDrawCall && this.framebuffer && this.injectionFinished) {
+            app.drawFramebuffer(this.framebuffer)
+                .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+                .depthTest()
+                .depthFunc(PicoGL.LEQUAL)
+                .noBlend()
+                .clear();
 
-            const rsmFlux = _RSMFrameBuffer.colorTextures[0];
-            const rsmPositions = _RSMFrameBuffer.colorTextures[1];
-            const rsmNormals = _RSMFrameBuffer.colorTextures[2];
-
-            if (this.propagationDrawCall && this.framebuffer) {
-                app.drawFramebuffer(this.framebuffer)
-                    .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
-                    .depthTest()
-                    .depthFunc(PicoGL.LEQUAL)
-                    .noBlend()
-                    .clear();
-
-                this.propagationDrawCall
-                    .texture('u_rsm_flux', rsmFlux)
-                    .texture('u_rsm_world_positions', rsmPositions)
-                    .texture('u_rsm_world_normals', rsmNormals)
-                    .uniform('u_texture_size', this.framebufferSize)
-                    .draw();
-            }
+            this.propagationDrawCall
+                //.texture('u_red_contribution', this.framebuffer.colorTextures[0])
+                //.texture('u_green_contribution', this.framebuffer.colorTextures[1])
+                //.texture('u_blue_contribution', this.framebuffer.colorTextures[2])
+                .uniform('u_grid_size', this.framebufferSize)
+                .draw();
         }
     }
 };

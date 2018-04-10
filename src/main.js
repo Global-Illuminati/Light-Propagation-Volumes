@@ -448,7 +448,7 @@ function render() {
 		//only refresh LPV when shadowmap has been updated
 		if(initLPV) {
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
-			//pointCloud.lightPropagation(shadowMapSmallFramebuffer);
+			pointCloud.lightPropagation(shadowMapSmallFramebuffer);
 			initLPV = false;
 		}
 		renderScene();
@@ -460,7 +460,7 @@ function render() {
 		renderEnvironment(inverseViewProjection);
 
 		// Call this to get a debug render of the passed in texture
-		//renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
+		renderTextureToScreen(pointCloud.framebuffer.colorTextures[0]);
 		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[0]);
 
 	}
