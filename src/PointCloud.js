@@ -60,9 +60,18 @@ RSMPointCloud.prototype = {
     },
 
     createFramebuffer: function(_size) {
-        const redBuffer = app.createTexture2D(_size * _size, _size);
-        const greenBuffer = app.createTexture2D(_size * _size, _size);
-        const blueBuffer = app.createTexture2D(_size * _size, _size);
+        const redBuffer = app.createTexture2D(_size * _size, _size, {
+            type: PicoGL.FLOAT,
+		    internalFormat: PicoGL.RBGA32F,
+        });
+        const greenBuffer = app.createTexture2D(_size * _size, _size, {
+            type: PicoGL.FLOAT,
+		    internalFormat: PicoGL.RBGA32F,
+        });
+        const blueBuffer = app.createTexture2D(_size * _size, _size, {
+            type: PicoGL.FLOAT,
+		    internalFormat: PicoGL.RBGA32F,
+        });
 
         const framebuffer = app.createFramebuffer()
         .colorTarget(0, redBuffer)
