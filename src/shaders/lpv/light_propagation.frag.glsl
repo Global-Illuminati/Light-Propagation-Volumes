@@ -104,8 +104,8 @@ void propagate() {
 
         //index offset in our flattened version of the lpv grid
         ivec2 index_offset = ivec2(
-            directions[neighbour].x + (directions[neighbour].z * float(u_grid_size)), 
-            directions[neighbour].y
+            direction.x + (direction.z * float(u_grid_size)), 
+            direction.y
         );
 
         ivec2 neighbour_index = v_cell_index - index_offset;
