@@ -323,6 +323,8 @@ function createSphereVertexArray(radius, rings, sectors) {
 
 function setupDirectionalLightShadowMapFramebuffer(size) {
 	var colorBuffer = app.createTexture2D(size, size, {
+		type: PicoGL.FLOAT,
+		internalFormat: PicoGL.RBGA32F,
 		minFilter: PicoGL.NEAREST,
 		magFilter: PicoGL.NEAREST,
 		generateMipmaps: true
@@ -335,11 +337,15 @@ function setupDirectionalLightShadowMapFramebuffer(size) {
 		generateMipmaps: true
 	});
 	var normalBuffer = app.createTexture2D(size, size, {
+		type: PicoGL.FLOAT,
+		internalFormat: PicoGL.RBGA32F,
 		minFilter: PicoGL.NEAREST,
 		magFilter: PicoGL.NEAREST,
 		generateMipmaps: true
 	});
 	var depthBuffer = app.createTexture2D(size, size, {
+		type: PicoGL.FLOAT,
+		internalFormat: PicoGL.RBGA32F,
 		format: PicoGL.DEPTH_COMPONENT
 	});
 	var framebuffer = app.createFramebuffer()
@@ -448,10 +454,10 @@ function render() {
 		//only refresh LPV when shadowmap has been updated
 		if(initLPV) {
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
-			pointCloud.lightPropagation(shadowMapSmallFramebuffer);
+			//pointCloud.lightPropagation();
 			initLPV = false;
 		}
-		renderScene(pointCloud.propagationFramebuffer);
+		renderScene(pointCloud.injectionFramebuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 		renderProbes(viewProjection);
@@ -462,7 +468,7 @@ function render() {
 		// Call this to get a debug render of the passed in texture
 		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
-		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[0]);
+		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[1]);
 
 	}
 	picoTimer.end();
