@@ -97,7 +97,6 @@ RSMPointCloud.prototype = {
 	            .noBlend()
 	            .clear();
 
-               //rsmFlux[0][0] = vec2.create(); //(0,0) //gives errors
                 this.injectionDrawCall
                 .texture('u_rsm_flux', rsmFlux)
                 .texture('u_rsm_world_positions', rsmPositions)
@@ -121,7 +120,7 @@ RSMPointCloud.prototype = {
                 .noBlend()
                 .clear();
 
-            //Take injection cloud as input and propagate
+            // Take injection cloud as input and propagate
             this.propagationDrawCall
                 .texture('u_red_contribution', this.injectionFramebuffer.colorTextures[0])
                 .texture('u_green_contribution', this.injectionFramebuffer.colorTextures[1])

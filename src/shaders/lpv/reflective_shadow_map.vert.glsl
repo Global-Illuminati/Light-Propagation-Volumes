@@ -14,7 +14,9 @@ void main()
 {
 	v_tex_coord = a_tex_coord;
 	v_normal = a_normal;
+
 	v_world_space_position = u_world_from_local * vec4(a_position, 1.0);
 	v_normal_matrix = transpose(inverse(u_world_from_local));
+
 	gl_Position = u_light_projection_from_world * u_world_from_local * vec4(a_position, 1.0);
 }

@@ -28,7 +28,7 @@ uniform sampler2D u_shadow_map;
 uniform vec3 u_dir_light_color;
 uniform vec3 u_dir_light_view_direction;
 
-//Light Propagation Volumes uniforms
+// Light Propagation Volumes uniforms
 uniform int u_texture_size;
 uniform sampler2D u_red_indirect_light;
 uniform sampler2D u_green_indirect_light;
@@ -65,22 +65,8 @@ vec4 sample_grid_trilinear(in sampler2D t, vec3 texCoord) {
 	return mix(r1, r2, texCoord.z - float(x0y0z0.z));
 }
 
-/*
-vec2 getGridTexCoord(vec3 pos)
-{
-	vec3 gridCell = getGridCell(pos);
-	float f_texture_size = float(u_texture_size);
-	//displace int coordinates with 0.5
-	vec2 texCoords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
-	//get texture space coordinates
-	vec2 texCoord = vec2((texCoords.x) / (f_texture_size * f_texture_size), (texCoords.y) / f_texture_size);
-	return texCoord;
-}
-*/
-
 vec3 getLPVIntensity()
 {
-	//vec2 gridTexCoord = getGridTexCoord(v_world_space_position.xyz);
 	vec4 shIntensity = dirToSH(-v_world_space_normal);
 	vec3 gridCell = getGridCellf(v_world_space_position.xyz, u_texture_size);
 
@@ -88,11 +74,11 @@ vec3 getLPVIntensity()
 	vec4 greenLight = sample_grid_trilinear(u_green_indirect_light, gridCell);
 	vec4 blueLight = sample_grid_trilinear(u_blue_indirect_light, gridCell);
 
-	//dot with sh coeffiencients to get directioal light intesity from the normal
+	// Dot with sh coeffiencients to get directioal light intesity from the normal
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
 }
 
-#define DEBUG_LPV
+//#define DEBUG_LPV
 
 void main()
 {
@@ -124,13 +110,13 @@ void main()
 	float lambertian = saturate(dot(N, wi));
 
 	//////////////////////////////////////////////////////////
-	// ambient
+	// Ambient
 	vec3 color = u_ambient_color.rgb * diffuse;
 
 	//////////////////////////////////////////////////////////
-	// directional light
+	// Directional light
 
-	// shadow visibility
+	// Shadow visibility
 	// TODO: Probably don't hardcode bias
 	// TODO: Send in shadow map pixel size as a uniform
 	const float bias = 0.0029;
@@ -142,17 +128,17 @@ void main()
 	{
 		vec3 wh = normalize(wi + wo);
 
-		// diffuse
+		// Diffuse
 		color += visibility * diffuse * lambertian * u_dir_light_color;
 
-		// specular
+		// Specular
 		float specular_angle = saturate(dot(N, wh));
 		float specular_power = pow(2.0, 13.0 * shininess); // (fake glossiness from the specular map)
 		float specular = pow(specular_angle, specular_power);
 		color += visibility * shininess * specular * u_dir_light_color;
 	}
 
-	// output tangents
+	// Output tangents
 	#ifdef DEBUG_LPV
 		o_color = vec4(lpv_radiance, 1.0);
 	#else

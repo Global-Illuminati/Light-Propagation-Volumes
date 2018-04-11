@@ -10,7 +10,8 @@
 
 #define CELLSIZE 1.0
 
-vec4 evalCosineLobeToDir(vec3 dir) {
+vec4 evalCosineLobeToDir(vec3 dir)
+{
 	return vec4( SH_cosLobe_C0, -SH_cosLobe_C1 * dir.y, SH_cosLobe_C1 * dir.z, -SH_cosLobe_C1 * dir.x );
 }
 
@@ -20,6 +21,7 @@ vec4 dirToSH(vec3 dir)
     return vec4(SH_C0, -SH_C1 * dir.y, SH_C1 * dir.z, -SH_C1 * dir.x);
 }
 
+// Get gridcell as vector of floats
 vec3 getGridCellf(vec3 world_space_position, int _max_grid_size) 
 {
 	const vec3 center = vec3(0);
@@ -28,6 +30,7 @@ vec3 getGridCellf(vec3 world_space_position, int _max_grid_size)
 	return vec3((world_space_position - min) / CELLSIZE);
 }
 
+// Get gridcell as vector of ints
 ivec3 getGridCelli(vec3 world_space_position, int max_grid_size) 
 {
 	return ivec3(getGridCellf(world_space_position, max_grid_size));

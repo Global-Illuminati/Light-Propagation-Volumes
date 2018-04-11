@@ -68,10 +68,10 @@ void propagate()
 	const float sideFaceSubtendedSolidAngle = 0.4234413544f / PI;
 
     // Add contributions of neighbours to this cell
-    for(int neighbour = 0; neighbour < 6; neighbour++)
+    for (int neighbour = 0; neighbour < 6; neighbour++)
     {
         mat3 orientation = neighbourOrientations[neighbour];
-        vec3 direction = orientation * vec3(0.0,0.0,1.0);
+        vec3 direction = orientation * vec3(0.0, 0.0, 1.0);
 
         // Index offset in our flattened version of the lpv grid
         ivec2 index_offset = ivec2(
@@ -93,7 +93,7 @@ void propagate()
         blue_contribution += directFaceSubtendedSolidAngle * max(0.0, dot( blue_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
 
         // Add contributions of faces of neighbour
-        for(int face = 0; face < 4; face++)
+        for (int face = 0; face < 4; face++)
         {
             vec3 eval_direction = getEvalSideDirection(face, orientation);
             vec3 reproj_direction = getReprojSideDirection(face, orientation);
