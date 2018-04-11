@@ -6,7 +6,8 @@ layout (location = 0) in vec2 a_cell_index;
 uniform highp int u_grid_size;
 flat out ivec2 v_cell_index;
 
-vec2 get_grid_output_position() {
+vec2 get_grid_output_position()
+{
     vec2 offsetPosition = a_cell_index + vec2(0.5); //offset position to middle of texel
     float f_grid_size = float(u_grid_size);
 

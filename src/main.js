@@ -445,7 +445,7 @@ function render() {
 		camera.update();
 
 		renderShadowMap();
-		//only refresh LPV when shadowmap has been updated
+		// Only refresh LPV when shadow map has been updated
 		if(initLPV) {
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
 			pointCloud.lightPropagation(shadowMapSmallFramebuffer);

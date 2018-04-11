@@ -79,8 +79,9 @@ vec3 getReprojSideDirection(int index, mat3 orientation)
     return orientation * vec3(current_side.x, current_side.y, 0);
 }
 
-void propagate() {
-
+void propagate()
+{
+    // Use solid angles to avoid inaccurate integral value stemming from low-order SH approximations
     const float directFaceSubtendedSolidAngle = 0.4006696846f / PI;
 	const float sideFaceSubtendedSolidAngle = 0.4234413544f / PI;
 
@@ -90,7 +91,7 @@ void propagate() {
         mat3 orientation = neighbourOrientations[neighbour];
         vec3 direction = orientation * vec3(0.0,0.0,1.0);
 
-        //index offset in our flattened version of the lpv grid
+        // Index offset in our flattened version of the lpv grid
         ivec2 index_offset = ivec2(
             direction.x + (direction.z * float(u_grid_size)), 
             direction.y
@@ -105,9 +106,9 @@ void propagate() {
         vec4 direction_cosine_lobe = evalCosineLobeToDir(direction);
         vec4 direction_spherical_harmonic = dirToSH(direction);
 
-        red_contribution += max(0.0, dot( red_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
-        green_contribution += max(0.0, dot( green_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
-        blue_contribution += max(0.0, dot( blue_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
+        red_contribution += directFaceSubtendedSolidAngle * max(0.0, dot( red_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
+        green_contribution += directFaceSubtendedSolidAngle * max(0.0, dot( green_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
+        blue_contribution += directFaceSubtendedSolidAngle * max(0.0, dot( blue_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
 
         // Add contributions of faces of neighbour
         for(int face = 0; face < 4; face++)
@@ -118,9 +119,9 @@ void propagate() {
             vec4 reproj_direction_cosine_lobe = evalCosineLobeToDir( reproj_direction );
 			vec4 eval_direction_spherical_harmonic = dirToSH( eval_direction );
 			
-		    red_contribution += max(0.0, dot( red_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
-			green_contribution += max(0.0, dot( green_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
-			blue_contribution += max(0.0, dot( blue_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+		    red_contribution += sideFaceSubtendedSolidAngle * max(0.0, dot( red_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+			green_contribution += sideFaceSubtendedSolidAngle * max(0.0, dot( green_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
+			blue_contribution += sideFaceSubtendedSolidAngle * max(0.0, dot( blue_contribution_neighbour, eval_direction_spherical_harmonic )) * reproj_direction_cosine_lobe;
         }
     }
 }
