@@ -178,7 +178,7 @@ function init() {
 	//////////////////////////////////////
 	// Basic GL state
 
-	app.clearColor(0, 0, 0, 1);
+	app.clearColor(0, 0, 0, 0);
 	app.cullBackfaces();
 	app.noBlend();
 
