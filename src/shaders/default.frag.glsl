@@ -2,15 +2,7 @@
 precision highp float;
 
 #include <common.glsl>
-
-#define CELLSIZE 1.0
-
-#define SH_C0 0.282094791f // 1 / 2sqrt(pi)
-#define SH_C1 0.488602512f // sqrt(3/pi) / 2
-
-/*Cosine lobe coeff*/
-#define SH_cosLobe_C0 0.886226925f // sqrt(pi)/2 
-#define SH_cosLobe_C1 1.02332671f // sqrt(pi/3)
+#include <lpv_common.glsl>
 
 //
 // NOTE: All fragment calculations are in *view space*
@@ -73,13 +65,6 @@ vec4 sample_grid_trilinear(in sampler2D t, vec3 texCoord) {
 	return mix(r1, r2, texCoord.z - float(x0y0z0.z));
 }
 
-vec3 getGridCell(vec3 pos) 
-{
-	const vec3 center = vec3(0);
-	vec3 maxGridSize = vec3(u_texture_size);
-	vec3 min = center - vec3(maxGridSize * 0.5 * CELLSIZE);
-	return vec3((pos - min) / CELLSIZE);
-}
 /*
 vec2 getGridTexCoord(vec3 pos)
 {
@@ -92,17 +77,12 @@ vec2 getGridTexCoord(vec3 pos)
 	return texCoord;
 }
 */
-// Get SH coefficients out of direction
-vec4 dirToSH(vec3 dir)
-{
-    return vec4(SH_C0, -SH_C1 * dir.y, SH_C1 * dir.z, -SH_C1 * dir.x);
-}
 
 vec3 getLPVIntensity()
 {
 	//vec2 gridTexCoord = getGridTexCoord(v_world_space_position.xyz);
 	vec4 shIntensity = dirToSH(-v_world_space_normal);
-	vec3 gridCell = getGridCell(v_world_space_position.xyz);
+	vec3 gridCell = getGridCellf(v_world_space_position.xyz, u_texture_size);
 
 	vec4 redLight = sample_grid_trilinear(u_red_indirect_light, gridCell);
 	vec4 greenLight = sample_grid_trilinear(u_green_indirect_light, gridCell);

@@ -3,12 +3,7 @@ precision highp float;
 
 #define PI 3.1415926f
 
-#define SH_C0 0.282094791f // 1 / 2sqrt(pi)
-#define SH_C1 0.488602512f // sqrt(3/pi) / 2
-
-/*Cosine lobe coeff*/
-#define SH_cosLobe_C0 0.886226925f // sqrt(pi)/2 
-#define SH_cosLobe_C1 1.02332671f // sqrt(pi/3)
+#include <lpv_common.glsl>
 
 layout(location = 0) out vec4 o_red_color;
 layout(location = 1) out vec4 o_green_color;
@@ -44,12 +39,6 @@ vec4 SHProjectCone(const vec3 dir)
 {
 	const vec2 ZHCoeffs = vec2(0.25, 0.5);
 	return SHRotate(dir, ZHCoeffs);
-}
-
-vec4 evalCosineLobeToDir(vec3 dir) {
-	dir = normalize(dir);
-	//f00, f-11, f01, f11
-	return vec4( SH_cosLobe_C0, -SH_cosLobe_C1 * dir.y, SH_cosLobe_C1 * dir.z, -SH_cosLobe_C1 * dir.x );
 }
 
 //#define DEBUG_RENDER

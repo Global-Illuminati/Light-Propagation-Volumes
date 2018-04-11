@@ -12,7 +12,7 @@ uniform sampler2D u_rsm_flux;
 uniform sampler2D u_rsm_world_positions;
 uniform sampler2D u_rsm_world_normals;
 
-#define CELLSIZE 1.0
+#include <lpv_common.glsl>
 
 struct RSMTexel 
 {
@@ -23,14 +23,6 @@ struct RSMTexel
 
 out RSMTexel v_rsm_texel;
 flat out ivec3 v_grid_cell;
-
-ivec3 getGridCell(vec3 pos) 
-{
-	const vec3 center = vec3(0);
-	vec3 maxGridSize = vec3(u_texture_size);
-	vec3 min = center - vec3(maxGridSize * 0.5 * CELLSIZE);
-	return ivec3((pos - min) / CELLSIZE);
-}
 
 RSMTexel getRSMTexel(ivec2 texCoord) 
 {
@@ -85,7 +77,7 @@ RSMTexel getDownSampledTexel()
 				float luminance = getTexelLuminance(rsmTexel);
 				if(luminance > maxLuminance)
 				{
-					brightestCell = getGridCell(rsmTexel.world_position);
+					brightestCell = getGridCelli(rsmTexel.world_position, u_texture_size);
 					maxLuminance = luminance;
 				}
 			}
@@ -101,7 +93,7 @@ RSMTexel getDownSampledTexel()
 		{
 			ivec2 texCoords = rsmTexCoords * downSamplingFactor + ivec2(i, j);
 			RSMTexel rsmTexel = getRSMTexel(texCoords);
-			ivec3 texelCell = getGridCell(rsmTexel.world_position);
+			ivec3 texelCell = getGridCelli(rsmTexel.world_position, u_texture_size);
 			vec3 deltaCell = vec3(texelCell - brightestCell);
 			if(dot(deltaCell, deltaCell) < 3.0)
 			{
@@ -126,7 +118,7 @@ void main()
 {
 	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
 	v_rsm_texel = getRSMTexel(rsmTexCoords);
-	v_grid_cell = getGridCell(v_rsm_texel.world_position);
+	v_grid_cell = getGridCelli(v_rsm_texel.world_position, u_texture_size);
 
 	vec2 tex_coord = getRenderingTexCoords(v_grid_cell);
 

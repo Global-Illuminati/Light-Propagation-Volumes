@@ -3,14 +3,7 @@ precision highp float;
 
 #define PI 3.1415926f
 
-#define SH_C0 0.282094791f // 1 / 2sqrt(pi)
-#define SH_C1 0.488602512f // sqrt(3/pi) / 2
-
-/*Cosine lobe coeff*/
-#define SH_cosLobe_C0 0.886226925f // sqrt(pi)/2
-#define SH_cosLobe_C1 1.02332671f // sqrt(pi/3)
-
-#define CELLSIZE 1.0
+#include <lpv_common.glsl>
 
 uniform highp int u_grid_size;
 
@@ -52,17 +45,6 @@ const ivec2 sideFaces[4] = ivec2[] (
     ivec2(-1, 0),  // left
     ivec2(0, -1)   // down
 );
-
-vec4 evalCosineLobeToDir(vec3 dir)
-{
-	return vec4(SH_cosLobe_C0, -SH_cosLobe_C1 * dir.y, SH_cosLobe_C1 * dir.z, -SH_cosLobe_C1 * dir.x);
-}
-
-// Get SH coeficients out of direction
-vec4 dirToSH(vec3 dir)
-{
-    return vec4(SH_C0, -SH_C1 * dir.y, SH_C1 * dir.z, -SH_C1 * dir.x);
-}
 
 vec3 getEvalSideDirection(int index, mat3 orientation)
 {
