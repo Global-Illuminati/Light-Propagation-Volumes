@@ -101,7 +101,7 @@ vec4 dirToSH(vec3 dir)
 vec3 getLPVIntensity()
 {
 	//vec2 gridTexCoord = getGridTexCoord(v_world_space_position.xyz);
-	vec4 shIntensity = dirToSH(-v_world_space_normal);
+	vec4 shIntensity = dirToSH(v_world_space_normal);
 	vec3 gridCell = getGridCell(v_world_space_position.xyz);
 
 	vec4 redLight = sample_grid_trilinear(u_red_indirect_light, gridCell);
@@ -135,7 +135,7 @@ void main()
 	float shininess = texture(u_specular_map, v_tex_coord).r;
 
 	vec3 lpv_intensity = getLPVIntensity();
-	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b)) / PI;
+	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b)) / 3.1415926f;
 	vec3 indirect_light = diffuse * lpv_radiance;
 
 	vec3 wi = normalize(-u_dir_light_view_direction);
