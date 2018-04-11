@@ -7,7 +7,9 @@ var gui;
 
 var settings = {
 	target_fps: 60,
-	environment_brightness: 1.5
+	environment_brightness: 1.5,
+
+	render_lpv_debug_view: false
 };
 
 var sceneSettings = {
@@ -34,7 +36,7 @@ var sceneUniforms;
 var shadowMapSize = 4096;
 var shadowMapFramebuffer;
 
-var shadowMapSmallSize = 512;
+var shadowMapSmallSize = 64;
 var shadowMapSmallFramebuffer;
 
 var initLPV = false;
@@ -45,12 +47,6 @@ var meshes = [];
 var texturesLoaded = 0;
 
 var probeDrawCall;
-var probeLocations = [
-	-10, 4,  0,
-	+10, 4,  0,
-	-10, 14, 0,
-	+10, 14, 0
-]
 
 window.addEventListener('DOMContentLoaded', function () {
 
@@ -177,6 +173,7 @@ function init() {
 	gui = new dat.GUI();
 	gui.add(settings, 'target_fps', 0, 120);
 	gui.add(settings, 'environment_brightness', 0.0, 2.0);
+	gui.add(settings, 'render_lpv_debug_view').name('Render LPV cells');
 
 	//////////////////////////////////////
 	// Basic GL state
@@ -215,6 +212,7 @@ function init() {
 	shaderLoader.addShaderProgram('shadowMapping', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
 	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_injection.vert.glsl', 'lpv/light_injection.frag.glsl');
 	shaderLoader.addShaderProgram('lightPropagation', 'lpv/light_propagation.vert.glsl', 'lpv/light_propagation.frag.glsl');
+	shaderLoader.addShaderProgram('lpvDebug', 'lpv/lpv_debug.vert.glsl', 'lpv/lpv_debug.frag.glsl');
 	shaderLoader.load(function(data) {
 
 		var fullscreenVertexArray = createFullscreenVertexArray();
@@ -231,9 +229,9 @@ function init() {
 		environmentDrawCall = app.createDrawCall(environmentShader, fullscreenVertexArray)
 		.texture('u_environment_map', loadTexture('environments/ocean.jpg', {}));
 
-		var unlitShader = makeShader('unlit', data);
+		var lpvDebugShader = makeShader('lpvDebug', data);
 		var probeVertexArray = createSphereVertexArray(0.08, 8, 8);
-		setupProbeDrawCall(probeVertexArray, unlitShader);
+		setupProbeDrawCall(probeVertexArray, lpvDebugShader);
 
 		defaultShader = makeShader('default', data);
 		shadowMapShader = makeShader('shadowMapping', data);
@@ -409,6 +407,50 @@ function createVertexArrayFromMeshInfo(meshInfo) {
 
 function setupProbeDrawCall(vertexArray, shader) {
 
+	//
+	// Place probes
+	//
+
+	var probeLocations = [];
+	var probeIndices   = [];
+
+	var gridSize = shadowMapSmallSize;
+	var origin = vec3.fromValues(0, 0, 0);
+	var step   = vec3.fromValues(1, 1, 1);
+
+	var halfGridSize = vec3.fromValues(gridSize / 2, gridSize / 2, gridSize / 2);
+	var halfSize = vec3.mul(vec3.create(), step, halfGridSize);
+
+	var bottomLeft = vec3.sub(vec3.create(), origin, halfSize);
+
+	var diff = vec3.create();
+
+	for (var z = 0; z < gridSize; ++z) {
+		for (var y = 0; y < gridSize; ++y) {
+			for (var x = 0; x < gridSize; ++x) {
+
+				vec3.mul(diff, step, vec3.fromValues(x, y, z));
+
+				var pos = vec3.create();
+				vec3.add(pos, bottomLeft, diff);
+				vec3.add(pos, pos, vec3.fromValues(0.5, 0.5, 0.5));
+
+				probeLocations.push(pos[0]);
+				probeLocations.push(pos[1]);
+				probeLocations.push(pos[2]);
+
+				probeIndices.push(x);
+				probeIndices.push(y);
+				probeIndices.push(z);
+
+			}
+		}
+	}
+
+	//
+	// Pack into instance buffer
+	//
+
 	// We need at least one (x,y,z) pair to render any probes
 	if (probeLocations.length <= 3) {
 		return;
@@ -421,10 +463,11 @@ function setupProbeDrawCall(vertexArray, shader) {
 
 	// Set up for instanced drawing at the probe locations
 	var translations = app.createVertexBuffer(PicoGL.FLOAT, 3, new Float32Array(probeLocations));
+	var indices      = app.createVertexBuffer(PicoGL.FLOAT, 3, new Float32Array(probeIndices));
 	vertexArray.instanceAttributeBuffer(10, translations);
+	vertexArray.instanceAttributeBuffer(11, indices);
 
-	probeDrawCall = app.createDrawCall(shader, vertexArray)
-	.uniform('u_color', vec3.fromValues(0, 1, 0));
+	probeDrawCall = app.createDrawCall(shader, vertexArray);
 
 }
 
@@ -461,7 +504,10 @@ function render() {
 		renderScene(pointCloud.injectionFramebuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
-		renderProbes(viewProjection);
+
+		if (settings.render_lpv_debug_view) {
+			renderLpvCells(viewProjection);
+		}
 
 		var inverseViewProjection = mat4.invert(mat4.create(), viewProjection);
 		renderEnvironment(inverseViewProjection);
@@ -494,7 +540,7 @@ function shadowMapNeedsRendering() {
 	var lastMeshCount = shadowMapNeedsRendering.lastMeshCount || 0;
 	var lastTexturesLoaded = shadowMapNeedsRendering.lastTexturesLoaded || 0;
 
-	if (vec3.equals(lastDirection, directionalLight.direction) && lastMeshCount === meshes.length 
+	if (vec3.equals(lastDirection, directionalLight.direction) && lastMeshCount === meshes.length
 		&& lastTexturesLoaded == texturesLoaded) {
 
 		return false;
@@ -529,7 +575,7 @@ if (!shadowMapNeedsRendering()) return;
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 
 		var mesh = meshes[i];
-		
+
 		mesh.shadowMapDrawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_light_projection_from_world', lightViewProjection)
@@ -554,7 +600,7 @@ if (!shadowMapNeedsRendering()) return;
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 
 		var mesh = meshes[i];
-		
+
 		mesh.shadowMapDrawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_light_projection_from_world', lightViewProjection)
@@ -579,7 +625,7 @@ function renderScene(framebuffer) {
 	.noBlend();
 	//.clear();
 
-	for (var i = 0, len = meshes.length; i < len; ++i) { 
+	for (var i = 0, len = meshes.length; i < len; ++i) {
 		var mesh = meshes[i];
 		mesh.drawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
@@ -599,7 +645,7 @@ function renderScene(framebuffer) {
 
 }
 
-function renderProbes(viewProjection) {
+function renderLpvCells(viewProjection) {
 
 	if (probeDrawCall) {
 
@@ -609,7 +655,14 @@ function renderProbes(viewProjection) {
 		.depthFunc(PicoGL.LEQUAL)
 		.noBlend();
 
+		// Replace with the propagated for a view of it
+		var lpv = pointCloud.injectionFramebuffer;
+
 		probeDrawCall
+		.texture('u_lpv_red', lpv.colorTextures[0])
+		.texture('u_lpv_green', lpv.colorTextures[1])
+		.texture('u_lpv_blue', lpv.colorTextures[2])
+		.uniform('u_lpv_size', shadowMapSmallSize)
 		.uniform('u_projection_from_world', viewProjection)
 		.draw();
 
