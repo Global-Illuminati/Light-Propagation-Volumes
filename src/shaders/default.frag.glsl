@@ -44,7 +44,7 @@ uniform sampler2D u_blue_indirect_light;
 
 layout(location = 0) out vec4 o_color;
 
-vec4 texture_trilinear(in sampler2D t, vec3 texCoord) {
+vec4 sample_grid_trilinear(in sampler2D t, vec3 texCoord) {
 	ivec3 x0y0z0 = ivec3(floor(texCoord.x), floor(texCoord.y), floor(texCoord.z));
 	ivec2 fetchCoords = ivec2(x0y0z0.x + (x0y0z0.z * u_texture_size), x0y0z0.y);
 
@@ -104,9 +104,9 @@ vec3 getLPVIntensity()
 	vec4 shIntensity = dirToSH(-v_world_space_normal);
 	vec3 gridCell = getGridCell(v_world_space_position.xyz);
 
-	vec4 redLight = texture_trilinear(u_red_indirect_light, gridCell);
-	vec4 greenLight = texture_trilinear(u_green_indirect_light, gridCell);
-	vec4 blueLight = texture_trilinear(u_blue_indirect_light, gridCell);
+	vec4 redLight = sample_grid_trilinear(u_red_indirect_light, gridCell);
+	vec4 greenLight = sample_grid_trilinear(u_green_indirect_light, gridCell);
+	vec4 blueLight = sample_grid_trilinear(u_blue_indirect_light, gridCell);
 
 	//dot with sh coeffiencients to get directioal light intesity from the normal
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
