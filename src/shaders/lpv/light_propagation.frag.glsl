@@ -28,18 +28,6 @@ vec4 red_contribution = vec4(0.0);
 vec4 green_contribution = vec4(0.0);
 vec4 blue_contribution = vec4(0.0);
 
-const vec3 directions[] = vec3[](
-    //z
-    vec3(0,0,1), 
-    vec3(0,0,-1), 
-    //x
-    vec3(1,0,0), 
-    vec3(-1,0,0), 
-    //y
-    vec3(0,1,0), 
-    vec3(0,-1,0)
-);
-
 // orientation = [ right | up | forward ] = [ x | y | z ]
 const mat3 neighbourOrientations[6] = mat3[] (
     // Z+
