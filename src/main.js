@@ -9,7 +9,8 @@ var settings = {
 	target_fps: 60,
 	environment_brightness: 1.5,
 
-	render_lpv_debug_view: false
+	render_lpv_debug_view: false,
+	render_indirect_light: false
 };
 
 var sceneSettings = {
@@ -40,7 +41,8 @@ var shadowMapSmallSize = 512;
 var shadowMapSmallFramebuffer;
 
 var initLPV = false;
-var lpvGridSize = 64;
+var lpvGridSize = 128;
+var indirectLightAttenuation = 1.0;
 
 var camera;
 var directionalLight;
@@ -175,6 +177,7 @@ function init() {
 	gui.add(settings, 'target_fps', 0, 120);
 	gui.add(settings, 'environment_brightness', 0.0, 2.0);
 	gui.add(settings, 'render_lpv_debug_view').name('Render LPV cells');
+	gui.add(settings, 'render_indirect_light').name('GI');
 
 	//////////////////////////////////////
 	// Basic GL state
@@ -636,6 +639,8 @@ function renderScene(framebuffer) {
 		.uniform('u_dir_light_view_direction', dirLightViewDirection)
 		.uniform('u_light_projection_from_world', lightViewProjection)
 		.uniform('u_texture_size', pointCloud.framebufferSize)
+		.uniform('u_gi', settings.render_indirect_light)
+		.uniform('u_indirect_light_attenuation', indirectLightAttenuation)
 		.texture('u_shadow_map', shadowMap)
 		.texture('u_red_indirect_light', framebuffer.colorTextures[0])
 		.texture('u_green_indirect_light', framebuffer.colorTextures[1])

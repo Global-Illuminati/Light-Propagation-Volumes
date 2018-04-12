@@ -24,12 +24,13 @@ uniform sampler2D u_specular_map;
 uniform sampler2D u_normal_map;
 uniform sampler2D u_shadow_map;
 
-
 uniform vec3 u_dir_light_color;
 uniform vec3 u_dir_light_view_direction;
 
 // Light Propagation Volumes uniforms
 uniform int u_texture_size;
+uniform float u_indirect_light_attenuation;
+uniform bool u_gi;
 uniform sampler2D u_red_indirect_light;
 uniform sampler2D u_green_indirect_light;
 uniform sampler2D u_blue_indirect_light;
@@ -78,7 +79,7 @@ vec3 getLPVIntensity()
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
 }
 
-#define DEBUG_LPV
+//#define DEBUG_LPV
 
 void main()
 {
@@ -101,7 +102,7 @@ void main()
 	float shininess = texture(u_specular_map, v_tex_coord).r;
 
 	vec3 lpv_intensity = getLPVIntensity();
-	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b)) / PI;
+	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b));
 	vec3 indirect_light = diffuse * lpv_radiance;
 
 	vec3 wi = normalize(-u_dir_light_view_direction);
@@ -140,9 +141,12 @@ void main()
 
 	// Output tangents
 	#ifdef DEBUG_LPV
-		o_color = vec4(lpv_radiance, 1.0) * 7.0;
+		o_color = vec4(indirect_light, 1.0) * 7.0 * PI;
 	#else
-		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0);
+	if(u_gi)
+		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0) * u_indirect_light_attenuation;
+	else
+		o_color = vec4(color, 1.0);
 	#endif
 
 }
