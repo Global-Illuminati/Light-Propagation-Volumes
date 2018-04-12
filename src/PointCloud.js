@@ -110,21 +110,31 @@ RSMPointCloud.prototype = {
         }
     },
 
-    lightPropagation() {
+    lightPropagation(_propagationIterations) {
+        let LPVS = [ this.injectionFramebuffer, this.propagationFramebuffer ];
+        const propagationIterations = _propagationIterations || 12;
+        for(var i = 0; i < propagationIterations; i++) {
+            //if even, return 0
+            let lpvIndex = i & 1;
+            this.lightPropagationIteration(LPVS[lpvIndex], LPVS[lpvIndex ^ 1]);
+        }
+    },
+
+    lightPropagationIteration(currentLPV, accumulatedLPV) {
         // Check if injection has been done
-        if (this.propagationDrawCall && this.injectionFramebuffer && this.propagationFramebuffer && this.injectionFinished) {
-            app.drawFramebuffer(this.propagationFramebuffer)
+        if (this.propagationDrawCall && currentLPV && accumulatedLPV && this.injectionFinished) {
+            app.drawFramebuffer(accumulatedLPV)
                 .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
-                .depthTest()
+                .noDepthTest()
                 .depthFunc(PicoGL.LEQUAL)
                 .noBlend()
                 .clear();
 
             // Take injection cloud as input and propagate
             this.propagationDrawCall
-                .texture('u_red_contribution', this.injectionFramebuffer.colorTextures[0])
-                .texture('u_green_contribution', this.injectionFramebuffer.colorTextures[1])
-                .texture('u_blue_contribution', this.injectionFramebuffer.colorTextures[2])
+                .texture('u_red_contribution', currentLPV.colorTextures[0])
+                .texture('u_green_contribution', currentLPV.colorTextures[1])
+                .texture('u_blue_contribution', currentLPV.colorTextures[2])
                 .uniform('u_grid_size', this.framebufferSize)
                 .draw();
         }

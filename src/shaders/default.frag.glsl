@@ -31,6 +31,7 @@ uniform vec3 u_dir_light_view_direction;
 uniform int u_texture_size;
 uniform float u_indirect_light_attenuation;
 uniform bool u_gi;
+uniform bool u_render_indirect_light;
 uniform sampler2D u_red_indirect_light;
 uniform sampler2D u_green_indirect_light;
 uniform sampler2D u_blue_indirect_light;
@@ -78,8 +79,6 @@ vec3 getLPVIntensity()
 	// Dot with sh coeffiencients to get directioal light intesity from the normal
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
 }
-
-//#define DEBUG_LPV
 
 void main()
 {
@@ -140,13 +139,11 @@ void main()
 	}
 
 	// Output tangents
-	#ifdef DEBUG_LPV
-		o_color = vec4(indirect_light, 1.0) * 7.0 * PI;
-	#else
 	if(u_gi)
 		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0) * u_indirect_light_attenuation;
+	else if (u_render_indirect_light)
+		o_color = vec4(indirect_light, 1.0) * u_indirect_light_attenuation;
 	else
 		o_color = vec4(color, 1.0);
-	#endif
 
 }
