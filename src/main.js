@@ -36,10 +36,11 @@ var sceneUniforms;
 var shadowMapSize = 4096;
 var shadowMapFramebuffer;
 
-var shadowMapSmallSize = 64;
+var shadowMapSmallSize = 512;
 var shadowMapSmallFramebuffer;
 
 var initLPV = false;
+var lpvGridSize = 64;
 
 var camera;
 var directionalLight;
@@ -198,7 +199,7 @@ function init() {
 
 	setupSceneUniforms();
 
-	pointCloud = new RSMPointCloud(shadowMapSmallSize);
+	pointCloud = new RSMPointCloud(shadowMapSmallSize, lpvGridSize);
 
 	var shaderLoader = new ShaderLoader('src/shaders/');
 	shaderLoader.addShaderFile('common.glsl');
@@ -414,7 +415,7 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var probeLocations = [];
 	var probeIndices   = [];
 
-	var gridSize = shadowMapSmallSize;
+	var gridSize = lpvGridSize;
 	var origin = vec3.fromValues(0, 0, 0);
 	var step   = vec3.fromValues(1, 1, 1);
 
@@ -498,10 +499,10 @@ function render() {
 		// Only refresh LPV when shadow map has been updated
 		if(initLPV) {
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
-			//pointCloud.lightPropagation();
+			pointCloud.lightPropagation();
 			initLPV = false;
 		}
-		renderScene(pointCloud.injectionFramebuffer);
+		renderScene(pointCloud.propagationFramebuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 

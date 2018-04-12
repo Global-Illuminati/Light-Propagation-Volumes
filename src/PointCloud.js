@@ -1,6 +1,6 @@
 function RSMPointCloud(_size, _LPVGridSize) {
-    this.size = _size || 4096;
-    this.framebufferSize = _LPVGridSize || 128;
+    this.size = _size || 512;
+    this.framebufferSize = _LPVGridSize || 32;
     this.injectionFramebuffer = this.createFramebuffer(this.framebufferSize);
     this.propagationFramebuffer = this.createFramebuffer(this.framebufferSize);
 }

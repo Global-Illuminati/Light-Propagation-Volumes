@@ -78,7 +78,7 @@ vec3 getLPVIntensity()
 	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
 }
 
-//#define DEBUG_LPV
+#define DEBUG_LPV
 
 void main()
 {
@@ -140,7 +140,7 @@ void main()
 
 	// Output tangents
 	#ifdef DEBUG_LPV
-		o_color = vec4(lpv_radiance, 1.0);
+		o_color = vec4(lpv_radiance, 1.0) * 7.0;
 	#else
 		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0);
 	#endif
