@@ -116,7 +116,7 @@ RSMPointCloud.prototype = {
         for(var i = 0; i < propagationIterations; i++) {
             //if even, return 0
             let lpvIndex = i & 1;
-            this.lightPropagationIteration(LPVS[lpvIndex], LPVS[lpvIndex ^ 1]);
+            this.lightPropagationIteration(LPVS[lpvIndex], LPVS[~lpvIndex]);
         }
     },
 
