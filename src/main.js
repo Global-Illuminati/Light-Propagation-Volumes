@@ -43,8 +43,8 @@ var shadowMapSmallSize = 512;
 var shadowMapSmallFramebuffer;
 
 var initLPV = false;
-var lpvGridSize = 128;
-var propagationIterations = 12;
+var lpvGridSize = 64;
+var propagationIterations = lpvGridSize / 16;
 
 var camera;
 var directionalLight;
