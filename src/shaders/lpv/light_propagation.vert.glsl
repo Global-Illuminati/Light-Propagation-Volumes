@@ -20,6 +20,6 @@ void main()
 
     v_cell_index = ivec2(a_cell_index);
 
-    gl_Position = vec4(screen_pos, 0.0, 1.0);
     gl_PointSize = 1.0;
+    gl_Position = vec4(screen_pos, 0.0, 1.0);
 }
