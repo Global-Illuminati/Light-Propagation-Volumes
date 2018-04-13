@@ -9,9 +9,11 @@ var settings = {
 	target_fps: 60,
 	environment_brightness: 1.5,
 
-	indirect_light_attenuation: 1.0,
+	rotate_light:false,
+
+	indirect_light_attenuation: 1.5,
 	render_lpv_debug_view: false,
-	render_gi: false,
+	render_direct_light: true,
 	render_indirect_light: false
 };
 
@@ -178,10 +180,11 @@ function init() {
 	gui = new dat.GUI();
 	gui.add(settings, 'target_fps', 0, 120);
 	gui.add(settings, 'environment_brightness', 0.0, 2.0);
+	gui.add(settings, 'rotate_light').name('Rotate light');
 	gui.add(settings, 'indirect_light_attenuation').name('Indirect light attenuation');
 	gui.add(settings, 'render_lpv_debug_view').name('Render LPV cells');
-	gui.add(settings, 'render_gi').name('GI');
-	gui.add(settings, 'render_indirect_light').name('Only indirect light');
+	gui.add(settings, 'render_direct_light').name('Direct light');
+	gui.add(settings, 'render_indirect_light').name('Indirect light');
 
 	//////////////////////////////////////
 	// Basic GL state
@@ -500,6 +503,11 @@ function render() {
 	stats.begin();
 	picoTimer.start();
 	{
+		if (settings["rotate_light"]) {
+            // Rotate light
+            vec3.rotateY(directionalLight.direction, directionalLight.direction, vec3.fromValues(0.0,0.0,0.0), 0.01);
+        }
+
 		camera.update();
 
 		renderShadowMap();
@@ -645,7 +653,7 @@ function renderScene(framebuffer) {
 		.uniform('u_dir_light_view_direction', dirLightViewDirection)
 		.uniform('u_light_projection_from_world', lightViewProjection)
 		.uniform('u_texture_size', pointCloud.framebufferSize)
-		.uniform('u_gi', settings.render_gi)
+		.uniform('u_render_direct_light', settings.render_direct_light)
 		.uniform('u_render_indirect_light', settings.render_indirect_light)
 		.uniform('u_indirect_light_attenuation', settings.indirect_light_attenuation)
 		.texture('u_shadow_map', shadowMap)
