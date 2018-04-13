@@ -145,7 +145,9 @@ void main()
 		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0) * u_indirect_light_attenuation;
 	else if (u_render_indirect_light)
 		o_color = vec4(indirect_light, 1.0) * u_indirect_light_attenuation;
-	else
+	else if (u_render_direct_light)
 		o_color = vec4(color, 1.0);
+	else 
+		o_color = vec4(0.0,0.0,0.0,1.0);
 
 }
