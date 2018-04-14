@@ -4,7 +4,7 @@ precision highp float;
 #include <lpv_common.glsl>
 
 #define PI 3.1415926f
-#define DEG_TO_RAD PI / 180f
+#define DEG_TO_RAD PI / 180.0f
 
 uniform int u_texture_size;
 uniform int u_rsm_size;
@@ -51,11 +51,11 @@ vec2 getRenderingTexCoords(ivec3 gridCell)
 float calculateSurfelAreaLight(vec3 lightPos)
 {
     float fov = 90.0f; //TODO fix correct fov
-    float aspect = u_rsm_size / u_rsm_size;
+    float aspect = float(u_rsm_size / u_rsm_size);
     float tanFovXHalf = tan(0.5 * fov * DEG_TO_RAD);
     float tanFovYHalf = tan(0.5 * fov * DEG_TO_RAD) * aspect;
 
-	return (4.0 * lightPos.z * lightPos.z * f_tanFovXHalf * f_tanFovYHalf) / float(u_rsm_size * u_rsm_size);
+	return (4.0 * lightPos.z * lightPos.z * tanFovXHalf * tanFovYHalf) / float(u_rsm_size * u_rsm_size);
 }
 
 void main()
