@@ -14,7 +14,7 @@ var settings = {
 	indirect_light_attenuation: 1.5,
 	render_lpv_debug_view: false,
 	render_direct_light: true,
-	render_indirect_light: false
+	render_indirect_light: false,
 };
 
 var sceneSettings = {
@@ -43,6 +43,8 @@ var shadowMapFramebuffer;
 
 var shadowMapSmallSize = 512;
 var shadowMapSmallFramebuffer;
+
+var geometryVolumeFramebuffer;
 
 var initLPV = false;
 var lpvGridSize = 64;
@@ -206,6 +208,7 @@ function init() {
 	directionalLight = new DirectionalLight();
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	shadowMapSmallFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize);
+    geometryVolumeFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize);
 
 	setupSceneUniforms();
 
@@ -223,6 +226,7 @@ function init() {
 	shaderLoader.addShaderProgram('shadowMapping', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
 	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_injection.vert.glsl', 'lpv/light_injection.frag.glsl');
 	shaderLoader.addShaderProgram('lightPropagation', 'lpv/light_propagation.vert.glsl', 'lpv/light_propagation.frag.glsl');
+    shaderLoader.addShaderProgram('geometryInjection', 'lpv/geometry_injection.vert.glsl', 'lpv/geometry_injection.frag.glsl');
 	shaderLoader.addShaderProgram('lpvDebug', 'lpv/lpv_debug.vert.glsl', 'lpv/lpv_debug.frag.glsl');
 	shaderLoader.load(function(data) {
 
@@ -232,8 +236,10 @@ function init() {
 		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
 
 		var lightInjectShader = makeShader('lightInjection', data);
+        var geometryInjectShader = makeShader('geometryInjection', data);
 		var lightPropagationShader = makeShader('lightPropagation', data);
 		pointCloud.createInjectionDrawCall(lightInjectShader);
+        pointCloud.createGeometryInjectDrawCall(geometryInjectShader);
 		pointCloud.createPropagationDrawCall(lightPropagationShader);
 
 		var environmentShader = makeShader('environment', data);
@@ -515,6 +521,7 @@ function render() {
 		if(initLPV) {
 			console.time('LPV');
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
+			pointCloud.geometryInjection(geometryVolumeFramebuffer, directionalLight); //Not really working yet
 			pointCloud.lightPropagation(propagationIterations);
 			initLPV = false;
 			console.timeEnd('LPV');
@@ -531,6 +538,7 @@ function render() {
 		renderEnvironment(inverseViewProjection);
 
 		// Call this to get a debug render of the passed in texture
+        //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[1]);
@@ -688,6 +696,31 @@ function renderLpvCells(viewProjection) {
 		.draw();
 
 	}
+
+}
+
+function renderGeometryCells(viewProjection) {
+
+    if (probeDrawCall) {
+
+        app.defaultDrawFramebuffer()
+            .defaultViewport()
+            .depthTest()
+            .depthFunc(PicoGL.LEQUAL)
+            .noBlend();
+
+        // Replace with the propagated for a view of it
+        var lpv = pointCloud.geometryInjectionFramebuffer;
+
+        probeDrawCall
+            .texture('u_lpv_red', lpv.colorTextures[0])
+            .texture('u_lpv_green', lpv.colorTextures[1])
+            .texture('u_lpv_blue', lpv.colorTextures[2])
+            .uniform('u_lpv_size', shadowMapSmallSize)
+            .uniform('u_projection_from_world', viewProjection)
+            .draw();
+
+    }
 
 }
 
