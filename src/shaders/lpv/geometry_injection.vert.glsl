@@ -1,0 +1,70 @@
+#version 300 es
+precision highp float;
+
+#include <lpv_common.glsl>
+
+uniform int u_texture_size;
+uniform int u_rsm_size;
+uniform vec3 u_light_direction;
+
+uniform sampler2D u_rsm_flux;
+uniform sampler2D u_rsm_world_positions;
+uniform sampler2D u_rsm_world_normals;
+
+struct RSMTexel 
+{
+	vec3 world_position;
+	vec3 world_normal;
+	vec4 flux;
+};
+
+out RSMTexel v_rsm_texel;
+flat out ivec3 v_volumeCellIndex;
+out float surfelArea;
+
+RSMTexel getRSMTexel(ivec2 texCoord) 
+{
+	RSMTexel texel;
+	texel.world_normal = texelFetch(u_rsm_world_normals, texCoord, 0).xyz;
+
+	// Displace the position by half a normal
+	texel.world_position = texelFetch(u_rsm_world_positions, texCoord, 0).xyz + 0.5 * texel.world_normal;
+	texel.flux = texelFetch(u_rsm_flux, texCoord, 0);
+	return texel;
+}
+
+// Get ndc texture coordinates from gridcell
+vec2 getRenderingTexCoords(ivec3 gridCell)
+{
+	float f_texture_size = float(u_texture_size);
+	// Displace int coordinates with 0.5
+	vec2 texCoords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
+	// Get ndc coordinates
+	vec2 ndc = vec2((2.0 * texCoords.x) / (f_texture_size * f_texture_size), (2.0 * texCoords.y) / f_texture_size) - vec2(1.0);
+	return ndc;
+}
+
+// Sample from light
+float calculateSurfelAreaLight(vec3 lightPos)
+{
+    float fov = 90.0f; //TODO fix correct fov
+    float aspect = 1.0f;
+    float f_tanFovXHalf = tan(0.5 * fov * (3.14f / 180.0f));
+    float f_tanFovYHalf = tan(0.5 * fov * (3.14f / 180.0f)) * aspect;
+
+	return (4.0 * lightPos.z * lightPos.z * f_tanFovXHalf * f_tanFovYHalf) / float(u_rsm_size * u_rsm_size);
+}
+
+void main()
+{
+	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
+	v_rsm_texel = getRSMTexel(rsmTexCoords);
+	ivec3 v_grid_cell = getGridCelli(v_rsm_texel.world_position, u_texture_size);
+
+	vec2 tex_coord = getRenderingTexCoords(v_grid_cell);
+
+	gl_PointSize = 1.0;
+	gl_Position = vec4(tex_coord, 0.0, 1.0);
+
+    surfelArea = calculateSurfelAreaLight(u_light_direction);
+}
