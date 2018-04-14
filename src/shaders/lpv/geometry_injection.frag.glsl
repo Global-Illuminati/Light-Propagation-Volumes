@@ -24,7 +24,7 @@ float calculateBlockingPotencial(vec3 dir, vec3 normal)
 	return clamp((surfelArea * clamp(dot(normal, dir), 0.0, 1.0)) / (CELLSIZE * CELLSIZE), 0.0, 1.0); //It is probability so 0.0 - 1.0
 }
 
-#define DEBUG_RENDER
+//#define DEBUG_RENDER
 
 void main()
 {
