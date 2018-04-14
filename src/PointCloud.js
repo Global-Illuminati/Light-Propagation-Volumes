@@ -2,6 +2,7 @@ function RSMPointCloud(_size, _LPVGridSize) {
     this.size = _size || 512;
     this.framebufferSize = _LPVGridSize || 32;
     this.injectionFramebuffer = this.createFramebuffer(this.framebufferSize);
+    this.geometryInjectionFramebuffer = this.createFramebuffer(this.framebufferSize);
     this.propagationFramebuffer = this.createFramebuffer(this.framebufferSize);
 }
 
@@ -51,6 +52,12 @@ RSMPointCloud.prototype = {
     this.injectionDrawCall = app.createDrawCall(_shader, this.createInjectionPointCloud(), PicoGL.POINTS);
         
         return this.injectionDrawCall;
+    },
+
+    createGeometryInjectDrawCall: function(_shader) {
+        this.geometryInjectionDrawCall = app.createDrawCall(_shader, this.createInjectionPointCloud(), PicoGL.POINTS);
+
+        return this.geometryInjectionDrawCall;
     },
 
     createPropagationDrawCall: function(_shader) {
@@ -110,6 +117,37 @@ RSMPointCloud.prototype = {
         }
     },
 
+    geometryInjection(_RSMFrameBuffer, directionalLight) {
+        this.geometryInjectionFinished = false;
+
+        if(_RSMFrameBuffer) {
+            const rsmFlux = _RSMFrameBuffer.colorTextures[0];
+            const rsmPositions = _RSMFrameBuffer.colorTextures[1];
+            const rsmNormals = _RSMFrameBuffer.colorTextures[2];
+            const directionalLightDirection = directionalLight.direction;
+
+            if (this.geometryInjectionDrawCall && this.geometryInjectionFramebuffer && this.injectionFinished) {
+                app.drawFramebuffer(this.geometryInjectionFramebuffer)
+                    .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+                    .depthTest()
+                    .depthFunc(PicoGL.LEQUAL)
+                    .noBlend()
+                    .clear();
+
+                this.geometryInjectionDrawCall
+                    .texture('u_rsm_flux', rsmFlux)
+                    .texture('u_rsm_world_positions', rsmPositions)
+                    .texture('u_rsm_world_normals', rsmNormals)
+                    .uniform('u_rsm_size', this.size)
+                    .uniform('u_texture_size', this.framebufferSize)
+                    .uniform('u_light_direction', directionalLightDirection)
+                    .draw();
+
+                this.geometryInjectionFinished = true;
+            }
+        }
+    },
+
     lightPropagation(_propagationIterations) {
         let LPVS = [ this.injectionFramebuffer, this.propagationFramebuffer ];
         const propagationIterations = _propagationIterations || 12;
@@ -122,7 +160,7 @@ RSMPointCloud.prototype = {
 
     lightPropagationIteration(currentLPV, accumulatedLPV) {
         // Check if injection has been done
-        if (this.propagationDrawCall && currentLPV && accumulatedLPV && this.injectionFinished) {
+        if (this.propagationDrawCall && currentLPV && accumulatedLPV && this.injectionFinished && this.geometryInjectionFinished) {
             app.drawFramebuffer(accumulatedLPV)
                 .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
                 .noDepthTest()
