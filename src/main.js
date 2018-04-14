@@ -699,31 +699,6 @@ function renderLpvCells(viewProjection) {
 
 }
 
-function renderGeometryCells(viewProjection) {
-
-    if (probeDrawCall) {
-
-        app.defaultDrawFramebuffer()
-            .defaultViewport()
-            .depthTest()
-            .depthFunc(PicoGL.LEQUAL)
-            .noBlend();
-
-        // Replace with the propagated for a view of it
-        var lpv = pointCloud.geometryInjectionFramebuffer;
-
-        probeDrawCall
-            .texture('u_lpv_red', lpv.colorTextures[0])
-            .texture('u_lpv_green', lpv.colorTextures[1])
-            .texture('u_lpv_blue', lpv.colorTextures[2])
-            .uniform('u_lpv_size', shadowMapSmallSize)
-            .uniform('u_projection_from_world', viewProjection)
-            .draw();
-
-    }
-
-}
-
 function renderEnvironment(inverseViewProjection) {
 
 	if (environmentDrawCall) {
