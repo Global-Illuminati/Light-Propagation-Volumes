@@ -151,11 +151,13 @@ RSMPointCloud.prototype = {
     lightPropagation(_propagationIterations) {
         let LPVS = [ this.injectionFramebuffer, this.propagationFramebuffer ];
         const propagationIterations = _propagationIterations || 12;
+        let lpvIndex;
         for(var i = 0; i < propagationIterations; i++) {
             //if even, return 0
-            let lpvIndex = i & 1;
+            lpvIndex = i & 1;
             this.lightPropagationIteration(LPVS[lpvIndex], LPVS[lpvIndex ^ 1]);
         }
+        this.accumulatedBuffer = LPVS[lpvIndex ^ 1];
     },
 
     lightPropagationIteration(currentLPV, accumulatedLPV) {

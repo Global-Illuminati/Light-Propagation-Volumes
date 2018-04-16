@@ -11,7 +11,7 @@ var settings = {
 
 	rotate_light:false,
 
-	indirect_light_attenuation: 1.5,
+	indirect_light_attenuation: 3.0,
 	render_lpv_debug_view: false,
 	render_direct_light: true,
 	render_indirect_light: false,
@@ -526,7 +526,8 @@ function render() {
 			initLPV = false;
 			console.timeEnd('LPV');
 		}
-		renderScene(pointCloud.propagationFramebuffer);
+		if(pointCloud.accumulatedBuffer)
+			renderScene(pointCloud.accumulatedBuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 
