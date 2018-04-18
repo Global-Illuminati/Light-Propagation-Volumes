@@ -8,6 +8,16 @@ float saturate(in float value) {
 	return clamp(value, 0.0, 1.0);
 }
 
+float lengthSquared(in vec2 v)
+{
+	return dot(v, v);
+}
+
+float lengthSquared(in vec3 v)
+{
+	return dot(v, v);
+}
+
 void reortogonalize(in vec3 v0, inout vec3 v1)
 {
 	// Perform Gram-Schmidt's re-ortogonalization process to make v1 orthagonal to v1
