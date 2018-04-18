@@ -44,8 +44,6 @@ var shadowMapFramebuffer;
 var shadowMapSmallSize = 512;
 var shadowMapSmallFramebuffer;
 
-var geometryVolumeFramebuffer;
-
 var initLPV = false;
 var lpvGridSize = 64;
 var propagationIterations = lpvGridSize / 16;
@@ -208,7 +206,6 @@ function init() {
 	directionalLight = new DirectionalLight();
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	shadowMapSmallFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize);
-    geometryVolumeFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize);
 
 	setupSceneUniforms();
 
@@ -337,7 +334,8 @@ function createSphereVertexArray(radius, rings, sectors) {
 
 }
 
-function setupDirectionalLightShadowMapFramebuffer(size) {
+function
+setupDirectionalLightShadowMapFramebuffer(size) {
 	var colorBuffer = app.createTexture2D(size, size, {
 		type: PicoGL.FLOAT,
 		internalFormat: PicoGL.RBGA32F,
@@ -518,15 +516,15 @@ function render() {
 
 		renderShadowMap();
 		// Only refresh LPV when shadow map has been updated
-		if(initLPV) {
+		if (initLPV) {
 			console.time('LPV');
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
-			pointCloud.geometryInjection(geometryVolumeFramebuffer, directionalLight); //Not really working yet
+			pointCloud.geometryInjection(shadowMapSmallFramebuffer, directionalLight); //TODO geo volume properly rendered?
 			pointCloud.lightPropagation(propagationIterations);
 			initLPV = false;
 			console.timeEnd('LPV');
 		}
-		if(pointCloud.accumulatedBuffer)
+		if (pointCloud.accumulatedBuffer)
 			renderScene(pointCloud.accumulatedBuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
@@ -539,8 +537,8 @@ function render() {
 		renderEnvironment(inverseViewProjection);
 
 		// Call this to get a debug render of the passed in texture
-        //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
+        //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[1]);
 
@@ -611,7 +609,6 @@ if (!shadowMapNeedsRendering()) return;
 		.draw();
 
 	}
-
 
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
 	var lightViewDirection = directionalLight.viewSpaceDirection(camera);

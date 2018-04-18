@@ -152,15 +152,16 @@ RSMPointCloud.prototype = {
         let LPVS = [ this.injectionFramebuffer, this.propagationFramebuffer ];
         const propagationIterations = _propagationIterations || 12;
         let lpvIndex;
-        for(var i = 0; i < propagationIterations; i++) {
+
+        for (let i = 0; i < propagationIterations; i++) {
             //if even, return 0
             lpvIndex = i & 1;
-            this.lightPropagationIteration(LPVS[lpvIndex], LPVS[lpvIndex ^ 1]);
+            this.lightPropagationIteration(i, LPVS[lpvIndex], LPVS[lpvIndex ^ 1]);
         }
         this.accumulatedBuffer = LPVS[lpvIndex ^ 1];
     },
 
-    lightPropagationIteration(currentLPV, accumulatedLPV) {
+    lightPropagationIteration(iteration, currentLPV, accumulatedLPV) {
         // Check if injection has been done
         if (this.propagationDrawCall && currentLPV && accumulatedLPV && this.injectionFinished && this.geometryInjectionFinished) {
             app.drawFramebuffer(accumulatedLPV)
@@ -170,12 +171,17 @@ RSMPointCloud.prototype = {
                 .noBlend()
                 .clear();
 
-            // Take injection cloud as input and propagate
+            // Don't use occlusion in first step to prevent self-shadowing
+            this.firstIteration = iteration <= 0;
+
+            // Take injection cloud and geometry volume as input and propagate
             this.propagationDrawCall
                 .texture('u_red_contribution', currentLPV.colorTextures[0])
                 .texture('u_green_contribution', currentLPV.colorTextures[1])
                 .texture('u_blue_contribution', currentLPV.colorTextures[2])
+                .texture('u_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[0]) //TODO check this
                 .uniform('u_grid_size', this.framebufferSize)
+                .uniform("u_first_iteration", this.firstIteration)
                 .draw();
         }
     }
