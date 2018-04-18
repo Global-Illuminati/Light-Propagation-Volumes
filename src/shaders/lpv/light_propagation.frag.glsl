@@ -11,7 +11,10 @@ uniform sampler2D u_red_contribution;
 uniform sampler2D u_green_contribution;
 uniform sampler2D u_blue_contribution;
 
-uniform sampler2D u_geometry_volume;
+uniform sampler2D u_red_geometry_volume;
+uniform sampler2D u_green_geometry_volume;
+uniform sampler2D u_blue_geometry_volume;
+
 uniform bool u_first_iteration;
 
 flat in ivec2 v_cell_index;
@@ -89,7 +92,10 @@ void propagate()
         vec4 green_contribution_neighbour = texelFetch(u_green_contribution, neighbour_index, 0);
         vec4 blue_contribution_neighbour = texelFetch(u_blue_contribution, neighbour_index, 0);
 
-        float occlusionValue = 1.0; // no occlusion
+        // No occlusion
+        float occlusionValueRed = 1.0;
+        float occlusionValueGreen = 1.0;
+        float occlusionValueBlue = 1.0;
 
         // No occlusion in the first step
         if (!u_first_iteration) {
@@ -100,18 +106,25 @@ void propagate()
             );
             ivec2 occCoord = v_cell_index - offset;
 
-            vec4 occCoeffs = texelFetch(u_geometry_volume, occCoord, 0);
-            occlusionValue = 1.0 - clamp(occlusionAmplifier * dot(occCoeffs, dirToSH(-direction)), 0.0, 1.0);
+            vec4 red_occCoeffs = texelFetch(u_red_geometry_volume, occCoord, 0);
+            vec4 green_occCoeffs = texelFetch(u_green_geometry_volume, occCoord, 0);
+            vec4 blue_occCoeffs = texelFetch(u_blue_geometry_volume, occCoord, 0);
+
+            occlusionValueRed = 1.0 - clamp(occlusionAmplifier * dot(red_occCoeffs, dirToSH(-direction)), 0.0, 1.0);
+            occlusionValueGreen = 1.0 - clamp(occlusionAmplifier * dot(green_occCoeffs, dirToSH(-direction)), 0.0, 1.0);
+            occlusionValueBlue = 1.0 - clamp(occlusionAmplifier * dot(blue_occCoeffs, dirToSH(-direction)), 0.0, 1.0);
         }
 
-        float occluded_direct_face_contribution = occlusionValue * directFaceSolidAngle;
+        float occluded_direct_face_red_contribution = occlusionValueRed * directFaceSolidAngle;
+        float occluded_direct_face_green_contribution = occlusionValueGreen * directFaceSolidAngle;
+        float occluded_direct_face_blue_contribution = occlusionValueBlue * directFaceSolidAngle;
 
         vec4 direction_cosine_lobe = evalCosineLobeToDir(direction);
         vec4 direction_spherical_harmonic = dirToSH(direction);
 
-        red_contribution += occluded_direct_face_contribution * max(0.0, dot(red_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
-        green_contribution += occluded_direct_face_contribution * max(0.0, dot( green_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
-        blue_contribution += occluded_direct_face_contribution * max(0.0, dot(blue_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
+        red_contribution += occluded_direct_face_red_contribution * max(0.0, dot(red_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
+        green_contribution += occluded_direct_face_green_contribution * max(0.0, dot( green_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
+        blue_contribution += occluded_direct_face_blue_contribution * max(0.0, dot(blue_contribution_neighbour, direction_spherical_harmonic)) * direction_cosine_lobe;
 
         // Add contributions of faces of neighbour
         for (int face = 0; face < 4; face++)
@@ -128,18 +141,25 @@ void propagate()
                 );
                 ivec2 occCoord = v_cell_index - offset;
 
-                vec4 occCoeffs = texelFetch(u_geometry_volume, occCoord, 0);
-                occlusionValue = 1.0 - clamp(occlusionAmplifier * dot(occCoeffs, dirToSH(-eval_direction)), 0.0, 1.0);
+                vec4 red_occCoeffs = texelFetch(u_red_geometry_volume, occCoord, 0);
+                vec4 green_occCoeffs = texelFetch(u_green_geometry_volume, occCoord, 0);
+                vec4 blue_occCoeffs = texelFetch(u_blue_geometry_volume, occCoord, 0);
+
+                occlusionValueRed = 1.0 - clamp(occlusionAmplifier * dot(red_occCoeffs, dirToSH(-direction)), 0.0, 1.0);
+                occlusionValueGreen = 1.0 - clamp(occlusionAmplifier * dot(green_occCoeffs, dirToSH(-direction)), 0.0, 1.0);
+                occlusionValueBlue = 1.0 - clamp(occlusionAmplifier * dot(blue_occCoeffs, dirToSH(-direction)), 0.0, 1.0);
             }
 
-            float occluded_side_face_contribution = occlusionValue * sideFaceSolidAngle;
+            float occluded_side_face_red_contribution = occlusionValueRed * sideFaceSolidAngle;
+            float occluded_side_face_green_contribution = occlusionValueGreen * sideFaceSolidAngle;
+            float occluded_side_face_blue_contribution = occlusionValueBlue * sideFaceSolidAngle;
 
             vec4 reproj_direction_cosine_lobe = evalCosineLobeToDir(reproj_direction);
 			vec4 eval_direction_spherical_harmonic = dirToSH(eval_direction);
 			
-		    red_contribution += occluded_side_face_contribution * max(0.0, dot(red_contribution_neighbour, eval_direction_spherical_harmonic)) * reproj_direction_cosine_lobe;
-			green_contribution += occluded_side_face_contribution * max(0.0, dot(green_contribution_neighbour, eval_direction_spherical_harmonic)) * reproj_direction_cosine_lobe;
-			blue_contribution += occluded_side_face_contribution * max(0.0, dot(blue_contribution_neighbour, eval_direction_spherical_harmonic)) * reproj_direction_cosine_lobe;
+		    red_contribution += occluded_side_face_red_contribution * max(0.0, dot(red_contribution_neighbour, eval_direction_spherical_harmonic)) * reproj_direction_cosine_lobe;
+			green_contribution += occluded_side_face_green_contribution * max(0.0, dot(green_contribution_neighbour, eval_direction_spherical_harmonic)) * reproj_direction_cosine_lobe;
+			blue_contribution += occluded_side_face_blue_contribution * max(0.0, dot(blue_contribution_neighbour, eval_direction_spherical_harmonic)) * reproj_direction_cosine_lobe;
         }
     }
 }

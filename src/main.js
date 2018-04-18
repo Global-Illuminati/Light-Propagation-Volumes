@@ -519,7 +519,7 @@ function render() {
 		if (initLPV) {
 			console.time('LPV');
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
-			pointCloud.geometryInjection(shadowMapSmallFramebuffer, directionalLight); //TODO geo volume properly rendered?
+			pointCloud.geometryInjection(shadowMapSmallFramebuffer, directionalLight);
 			pointCloud.lightPropagation(propagationIterations);
 			initLPV = false;
 			console.timeEnd('LPV');

@@ -179,7 +179,9 @@ RSMPointCloud.prototype = {
                 .texture('u_red_contribution', currentLPV.colorTextures[0])
                 .texture('u_green_contribution', currentLPV.colorTextures[1])
                 .texture('u_blue_contribution', currentLPV.colorTextures[2])
-                .texture('u_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[0]) //TODO check this
+                .texture('u_red_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[0])
+                .texture('u_green_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[1])
+                .texture('u_blue_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[2])
                 .uniform('u_grid_size', this.framebufferSize)
                 .uniform("u_first_iteration", this.firstIteration)
                 .draw();
