@@ -4,6 +4,7 @@ function RSMPointCloud(_size, _LPVGridSize) {
     this.injectionFramebuffer = this.createFramebuffer(this.framebufferSize);
     this.geometryInjectionFramebuffer = this.createFramebuffer(this.framebufferSize);
     this.propagationFramebuffer = this.createFramebuffer(this.framebufferSize);
+    this.accumulatedBuffer = this.createFramebuffer(this.framebufferSize);
 }
 
 RSMPointCloud.prototype = {
@@ -102,7 +103,7 @@ RSMPointCloud.prototype = {
 	            .depthTest()
 	            .depthFunc(PicoGL.LEQUAL)
 	            .noBlend()
-	            .clear();
+                .clear();
 
                 this.injectionDrawCall
                 .texture('u_rsm_flux', rsmFlux)
@@ -111,7 +112,7 @@ RSMPointCloud.prototype = {
                 .uniform('u_rsm_size', this.size)
                 .uniform('u_texture_size', this.framebufferSize)
                 .draw();
-
+                
                 this.injectionFinished = true;
             }
         }
@@ -148,7 +149,14 @@ RSMPointCloud.prototype = {
         }
     },
 
+    clearAccumulatedBuffer() {
+        app.drawFramebuffer(this.accumulatedBuffer)
+            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+            .clear();
+    },
+
     lightPropagation(_propagationIterations) {
+        
         let LPVS = [ this.injectionFramebuffer, this.propagationFramebuffer ];
         const propagationIterations = _propagationIterations || 12;
         let lpvIndex;
@@ -156,29 +164,37 @@ RSMPointCloud.prototype = {
         for (let i = 0; i < propagationIterations; i++) {
             //if even, return 0
             lpvIndex = i & 1;
-            this.lightPropagationIteration(i, LPVS[lpvIndex], LPVS[lpvIndex ^ 1]);
+            var readLPV = LPVS[lpvIndex];
+            var nextIterationLPV = LPVS[lpvIndex ^ 1];
+
+            app.drawFramebuffer(nextIterationLPV).clear();
+
+            this.lightPropagationIteration(i, readLPV, nextIterationLPV, this.accumulatedBuffer);
         }
-        this.accumulatedBuffer = LPVS[lpvIndex ^ 1];
     },
 
-    lightPropagationIteration(iteration, currentLPV, accumulatedLPV) {
+    lightPropagationIteration(iteration, readLPV, nextIterationLPV, accumulatedLPV) {
         // Check if injection has been done
-        if (this.propagationDrawCall && currentLPV && accumulatedLPV && this.injectionFinished && this.geometryInjectionFinished) {
+        if (this.propagationDrawCall && this.injectionFinished && this.geometryInjectionFinished) {
+            accumulatedLPV
+                .colorTarget(3, nextIterationLPV.colorTextures[0])
+                .colorTarget(4, nextIterationLPV.colorTextures[1])
+                .colorTarget(5, nextIterationLPV.colorTextures[2]);
+
             app.drawFramebuffer(accumulatedLPV)
                 .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
                 .noDepthTest()
-                .depthFunc(PicoGL.LEQUAL)
-                .noBlend()
-                .clear();
+                .blend()
+                .blendFunc(PicoGL.ONE, PicoGL.ONE);
 
             // Don't use occlusion in first step to prevent self-shadowing
             this.firstIteration = iteration <= 0;
 
             // Take injection cloud and geometry volume as input and propagate
             this.propagationDrawCall
-                .texture('u_red_contribution', currentLPV.colorTextures[0])
-                .texture('u_green_contribution', currentLPV.colorTextures[1])
-                .texture('u_blue_contribution', currentLPV.colorTextures[2])
+                .texture('u_red_contribution', readLPV.colorTextures[0])
+                .texture('u_green_contribution', readLPV.colorTextures[1])
+                .texture('u_blue_contribution', readLPV.colorTextures[2])
                 .texture('u_red_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[0])
                 .texture('u_green_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[1])
                 .texture('u_blue_geometry_volume', this.geometryInjectionFramebuffer.colorTextures[2])

@@ -538,6 +538,9 @@ function render() {
 		renderShadowMap();
 		// Only refresh LPV when shadow map has been updated
 		if (initLPV) {
+			if(pointCloud.accumulatedBuffer)
+				pointCloud.clearAccumulatedBuffer();
+
 			console.time('LPV');
 
 			for(var i = 0; i < rsmFramebuffers.length; i++) {
@@ -685,8 +688,8 @@ function renderScene(framebuffer) {
 	.defaultViewport()
 	.depthTest()
 	.depthFunc(PicoGL.LEQUAL)
-	.noBlend();
-	//.clear();
+	.noBlend()
+	.clear();
 
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 		var mesh = meshes[i];
