@@ -3,7 +3,10 @@ function SpotLight(position, direction, coneAngle, color) {
 
 	this.position = position || vec3.fromValues(0, 2, 0);
 	this.direction = direction || vec3.fromValues(0.3, -0.3, 0.3);
+	console.log(this.direction);
 	vec3.normalize(this.direction, this.direction);
+	console.log("after");
+	console.log(this.direction);
 
 	this.color = color || new Float32Array([1.5, 1.5, 1.5]);
 
@@ -43,7 +46,7 @@ SpotLight.prototype = {
 
 		var lookatPoint = vec3.add(vec3.create(), this.position, this.direction);
 		var up          = vec3.fromValues(0, 1, 0);
-		mat4.lookAt(this.lightViewMatrix, position, lookatPoint, up);
+		mat4.lookAt(this.lightViewMatrix, this.position, lookatPoint, up);
 
 		return this.lightViewMatrix;
 
@@ -51,9 +54,9 @@ SpotLight.prototype = {
 
 	getLightProjectionMatrix: function() {
 
-		var fov = cone / 2.0;
-		var near = 0.2;
-		var far = 100.0;
+		var fov = this.cone / 2.0;
+		var near = 0.01;
+		var far = 1000.0;
 		mat4.perspective(this.lightProjectionMatrix, fov, 1.0, near, far);
 
 		return this.lightProjectionMatrix;

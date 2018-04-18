@@ -42,14 +42,19 @@ var shadowMapSize = 4096;
 var shadowMapFramebuffer;
 
 var shadowMapSmallSize = 512;
-var shadowMapSmallFramebuffer;
+var rsmFramebuffers = [];
 
 var initLPV = false;
 var lpvGridSize = 64;
 var propagationIterations = lpvGridSize / 16;
 
 var camera;
+
 var directionalLight;
+var spotLight;
+
+var lightSources = [];
+
 var meshes = [];
 var texturesLoaded = 0;
 
@@ -204,12 +209,16 @@ function init() {
 	// Scene setup
 
 	directionalLight = new DirectionalLight();
-	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
-	shadowMapSmallFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize);
 
-	var spotPos = vec3.fromValues(-5, 2.2, -8);
-	var spotDir = vec3.fromValues(0, 0, 1);
-	spotLight = new SpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
+	addDirectionalLight();
+	var spotPos = vec3.fromValues(0, 15, 0);
+	var spotDir = vec3.fromValues(0, -1, 0.001);
+	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
+
+	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
+	for(var i = 0; i < lightSources.length; i++) {
+		rsmFramebuffers.push(setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize));
+	}
 
 	setupSceneUniforms();
 
@@ -265,6 +274,14 @@ function init() {
 
 	});
 
+}
+
+function addDirectionalLight(direction, color) {
+	lightSources.push({'source' : new DirectionalLight(direction, color), 'type' : 'DIRECTIONAL_LIGHT'});
+}
+
+function addSpotLight(position, direction, coneAngle, color) {
+	lightSources.push({'source' : new SpotLight(position, direction, coneAngle, color) , 'type' : 'SPOT_LIGHT'});
 }
 
 function createFullscreenVertexArray() {
@@ -522,8 +539,12 @@ function render() {
 		// Only refresh LPV when shadow map has been updated
 		if (initLPV) {
 			console.time('LPV');
-			pointCloud.lightInjection(shadowMapSmallFramebuffer);
-			pointCloud.geometryInjection(shadowMapSmallFramebuffer, directionalLight);
+
+			for(var i = 0; i < rsmFramebuffers.length; i++) {
+				pointCloud.lightInjection(rsmFramebuffers[0]);
+			}
+
+			pointCloud.geometryInjection(rsmFramebuffers[0], directionalLight);
 			pointCloud.lightPropagation(propagationIterations);
 			initLPV = false;
 			console.timeEnd('LPV');
@@ -544,7 +565,7 @@ function render() {
 		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
         //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
-		//renderTextureToScreen(shadowMapSmallFramebuffer.colorTextures[1]);
+		//renderTextureToScreen(rsmFramebuffers[1].colorTextures[0]);
 
 	}
 	picoTimer.end();
@@ -586,32 +607,43 @@ function shadowMapNeedsRendering() {
 }
 
 function renderShadowMap() {
-//TODO: only render when needed to
-if (!shadowMapNeedsRendering()) return;
+	//TODO: only render when needed to
+	if (!shadowMapNeedsRendering()) return;
 
-	if (!directionalLight) return;
-	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
-	var lightViewDirection = directionalLight.viewSpaceDirection(camera);
-	var lightColor = directionalLight.color;
+	for(var i = 0; i < lightSources.length; i++)
+	{
+		var light = lightSources[i];
 
-	app.drawFramebuffer(shadowMapSmallFramebuffer)
-	.viewport(0, 0, shadowMapSmallSize, shadowMapSmallSize)
-	.depthTest()
-	.depthFunc(PicoGL.LEQUAL)
-	.noBlend()
-	.clear();
+		var lightViewProjection = light.source.getLightViewProjectionMatrix();
+		var lightDirection;
+		if(light.type === 'DIRECTIONAL_LIGHT') {
+			lightDirection = light.source.viewSpaceDirection(camera);
+		}
+		else if(light.type === 'SPOT_LIGHT') {
+			lightDirection = light.source.direction;
+		}
 
-	for (var i = 0, len = meshes.length; i < len; ++i) {
+		var lightColor = light.source.color;
 
-		var mesh = meshes[i];
+		app.drawFramebuffer(rsmFramebuffers[i])
+		.viewport(0, 0, shadowMapSmallSize, shadowMapSmallSize)
+		.depthTest()
+		.depthFunc(PicoGL.LEQUAL)
+		.noBlend()
+		.clear();
 
-		mesh.shadowMapDrawCall
-		.uniform('u_world_from_local', mesh.modelMatrix)
-		.uniform('u_light_projection_from_world', lightViewProjection)
-		.uniform('u_light_direction', lightViewDirection)
-		.uniform('u_light_color', lightColor)
-		.draw();
+		for (var j = 0, len = meshes.length; j < len; j++) {
 
+			var mesh = meshes[j];
+
+			mesh.shadowMapDrawCall
+			.uniform('u_is_directional_light', light.type === 'DIRECTIONAL_LIGHT')
+			.uniform('u_world_from_local', mesh.modelMatrix)
+			.uniform('u_light_projection_from_world', lightViewProjection)
+			.uniform('u_light_direction', lightDirection)
+			.uniform('u_light_color', lightColor)
+			.draw();
+		}
 	}
 
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
@@ -646,8 +678,8 @@ function renderScene(framebuffer) {
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
 	var shadowMap = shadowMapFramebuffer.depthTexture;
 
-	var spotLightViewPosition = spotLight.viewSpacePosition(camera);
-	var spotLightViewDirection = spotLight.viewSpaceDirection(camera);
+	var spotLightViewPosition = lightSources[1].source.viewSpacePosition(camera);
+	var spotLightViewDirection = lightSources[1].source.viewSpaceDirection(camera);
 
 	app.defaultDrawFramebuffer()
 	.defaultViewport()
@@ -669,8 +701,8 @@ function renderScene(framebuffer) {
 		.uniform('u_render_direct_light', settings.render_direct_light)
 		.uniform('u_render_indirect_light', settings.render_indirect_light)
 		.uniform('u_indirect_light_attenuation', settings.indirect_light_attenuation)
-		.uniform('u_spot_light_color', spotLight.color)
-		.uniform('u_spot_light_cone', spotLight.cone)
+		.uniform('u_spot_light_color', lightSources[1].source.color)
+		.uniform('u_spot_light_cone', lightSources[1].source.cone)
 		.uniform('u_spot_light_view_position', spotLightViewPosition)
 		.uniform('u_spot_light_view_direction', spotLightViewDirection)
 		.texture('u_shadow_map', shadowMap)
