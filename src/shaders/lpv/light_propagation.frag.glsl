@@ -23,6 +23,10 @@ layout(location = 0) out vec4 o_red_color;
 layout(location = 1) out vec4 o_green_color;
 layout(location = 2) out vec4 o_blue_color;
 
+layout(location = 3) out vec4 o_next_iteration_red_color;
+layout(location = 4) out vec4 o_next_iteration_green_color;
+layout(location = 5) out vec4 o_next_iteration_blue_color;
+
 vec4 red_contribution = vec4(0.0);
 vec4 green_contribution = vec4(0.0);
 vec4 blue_contribution = vec4(0.0);
@@ -168,7 +172,11 @@ void main()
 {
     propagate();
 
-    o_red_color += red_contribution;
-    o_green_color += green_contribution;
-    o_blue_color += blue_contribution;
+    o_red_color = red_contribution;
+    o_green_color = green_contribution;
+    o_blue_color = blue_contribution;
+
+    o_next_iteration_red_color = red_contribution;
+    o_next_iteration_green_color = green_contribution;
+    o_next_iteration_blue_color = blue_contribution;
 }
