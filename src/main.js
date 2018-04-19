@@ -254,6 +254,7 @@ function init() {
 		defaultShader = makeShader('default', data);
 		shadowMapShader = makeShader('shadowMapping', data);
 		loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
+        //loadObject('sponza_crytek/', 'sponza.obj', 'sponza.mtl');
 		{
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 45, 0);
