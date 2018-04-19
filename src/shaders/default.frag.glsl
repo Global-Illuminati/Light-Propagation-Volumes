@@ -27,6 +27,11 @@ uniform sampler2D u_shadow_map;
 uniform vec3 u_dir_light_color;
 uniform vec3 u_dir_light_view_direction;
 
+uniform vec3  u_spot_light_color;
+uniform float u_spot_light_cone;
+uniform vec3  u_spot_light_view_position;
+uniform vec3  u_spot_light_view_direction;
+
 // Light Propagation Volumes uniforms
 uniform int u_texture_size;
 uniform float u_indirect_light_attenuation;
@@ -138,6 +143,35 @@ void main()
 		float specular_power = pow(2.0, 13.0 * shininess); // (fake glossiness from the specular map)
 		float specular = pow(specular_angle, specular_power);
 		color += visibility * shininess * specular * u_dir_light_color;
+	}
+
+	//////////////////////////////////////////////////////////
+	// spot light
+	{
+		vec3 light_to_frag = v_position - u_spot_light_view_position;
+		float distance_attenuation = 1.0 / max(0.01, lengthSquared(light_to_frag));
+
+		vec3 wi = normalize(-light_to_frag);
+		float lambertian = saturate(dot(N, wi));
+
+		const float smoothing = 0.15;
+		float inner = u_spot_light_cone - smoothing;
+		float outer = u_spot_light_cone;
+		float cone_attenuation = 1.0 - smoothstep(inner, outer, 1.0 - dot(-wi, u_spot_light_view_direction));
+
+		if (lambertian > 0.0 && cone_attenuation > 0.0)
+		{
+			vec3 wh = normalize(wi + wo);
+
+			// diffuse
+			color += diffuse * distance_attenuation * cone_attenuation * lambertian * u_spot_light_color;
+
+			// specular
+			float specular_angle = saturate(dot(N, wh));
+			float specular_power = pow(abs(2.0), 13.0 * shininess);
+			float specular = pow(abs(specular_angle), specular_power);
+			color += shininess * distance_attenuation * cone_attenuation * specular * u_spot_light_color;
+		}
 	}
 
 	// Output tangents

@@ -207,6 +207,10 @@ function init() {
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	shadowMapSmallFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize);
 
+	var spotPos = vec3.fromValues(-5, 2.2, -8);
+	var spotDir = vec3.fromValues(0, 0, 1);
+	spotLight = new SpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
+
 	setupSceneUniforms();
 
 	pointCloud = new RSMPointCloud(shadowMapSmallSize, lpvGridSize);
@@ -517,6 +521,9 @@ function render() {
 		renderShadowMap();
 		// Only refresh LPV when shadow map has been updated
 		if (initLPV) {
+			if(pointCloud.accumulatedBuffer)
+				pointCloud.clearAccumulatedBuffer();
+
 			console.time('LPV');
 			pointCloud.lightInjection(shadowMapSmallFramebuffer);
 			pointCloud.geometryInjection(shadowMapSmallFramebuffer, directionalLight);
@@ -642,12 +649,15 @@ function renderScene(framebuffer) {
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
 	var shadowMap = shadowMapFramebuffer.depthTexture;
 
+	var spotLightViewPosition = spotLight.viewSpacePosition(camera);
+	var spotLightViewDirection = spotLight.viewSpaceDirection(camera);
+
 	app.defaultDrawFramebuffer()
 	.defaultViewport()
 	.depthTest()
 	.depthFunc(PicoGL.LEQUAL)
-	.noBlend();
-	//.clear();
+	.noBlend()
+	.clear();
 
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 		var mesh = meshes[i];
@@ -662,6 +672,10 @@ function renderScene(framebuffer) {
 		.uniform('u_render_direct_light', settings.render_direct_light)
 		.uniform('u_render_indirect_light', settings.render_indirect_light)
 		.uniform('u_indirect_light_attenuation', settings.indirect_light_attenuation)
+		.uniform('u_spot_light_color', spotLight.color)
+		.uniform('u_spot_light_cone', spotLight.cone)
+		.uniform('u_spot_light_view_position', spotLightViewPosition)
+		.uniform('u_spot_light_view_direction', spotLightViewDirection)
 		.texture('u_shadow_map', shadowMap)
 		.texture('u_red_indirect_light', framebuffer.colorTextures[0])
 		.texture('u_green_indirect_light', framebuffer.colorTextures[1])

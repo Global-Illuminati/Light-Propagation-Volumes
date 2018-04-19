@@ -21,7 +21,7 @@ in RSMTexel v_rsm_texel;
 
 void main()
 {
-	vec4 SH_coeffs = evalCosineLobeToDir(v_rsm_texel.world_normal);
+	vec4 SH_coeffs = (evalCosineLobeToDir(v_rsm_texel.world_normal)) / PI;
 	vec4 shR = SH_coeffs * v_rsm_texel.flux.r;
 	vec4 shG = SH_coeffs * v_rsm_texel.flux.g;
 	vec4 shB = SH_coeffs * v_rsm_texel.flux.b;
