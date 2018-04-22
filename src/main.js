@@ -45,7 +45,7 @@ var shadowMapSmallSize = 512;
 var rsmFramebuffers = [];
 
 var initLPV = false;
-var lpvGridSize = 64;
+var lpvGridSize = 128;
 var propagationIterations = lpvGridSize / 16;
 
 var camera;
@@ -208,12 +208,14 @@ function init() {
 	//////////////////////////////////////
 	// Scene setup
 
-	directionalLight = new DirectionalLight();
-
 	addDirectionalLight();
-	var spotPos = vec3.fromValues(0, 15, 0);
-	var spotDir = vec3.fromValues(0, -1, 0.001);
+	directionalLight = lightSources[0].source;
+	var spotPos = vec3.fromValues(-5, 2.2, -8);
+	var spotDir = vec3.fromValues(0, 0, 1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
+	spotPos = vec3.fromValues(-5, 2.2, 8);
+	spotDir = vec3.fromValues(0, 0, -1);
+	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));
 
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	for(var i = 0; i < lightSources.length; i++) {
@@ -263,15 +265,25 @@ function init() {
 		defaultShader = makeShader('default', data);
 		shadowMapShader = makeShader('shadowMapping', data);
 		loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
-        //loadObject('sponza_crytek/', 'sponza.obj', 'sponza.mtl');
+		//loadObject('sponza_crytek/', 'sponza.obj', 'sponza.mtl');
+		/*
 		{
+			let m = mat4.create();
+			let r = quat.fromEuler(quat.create(), 0, 0, 0);
+			let t = vec3.fromValues(0, 0, 0);
+			let s = vec3.fromValues(1, 1, 1);
+			mat4.fromRotationTranslationScale(m, r, t, s);
+			loadObject('test_room/', 'test_room.obj', 'test_room.mtl', m);
+		}
+*/
+		/*{
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 45, 0);
 			let t = vec3.fromValues(-5, 1, 2.5);
 			let s = vec3.fromValues(0.06, 0.06, 0.06);
 			mat4.fromRotationTranslationScale(m, r, t, s);
 			loadObject('teapot/', 'teapot.obj', 'default.mtl', m);
-		}
+		}*/
 
 	});
 
@@ -538,14 +550,17 @@ function render() {
 
 		renderShadowMap();
 		// Only refresh LPV when shadow map has been updated
-		if (initLPV) {
-			if(pointCloud.accumulatedBuffer)
+		if (initLPV && settings.render_indirect_light) {
+			if(pointCloud.accumulatedBuffer && pointCloud.injectionFramebuffer) {
+				pointCloud.clearInjectionBuffer();
 				pointCloud.clearAccumulatedBuffer();
+
+			}
 
 			console.time('LPV');
 
 			for(var i = 0; i < rsmFramebuffers.length; i++) {
-				pointCloud.lightInjection(rsmFramebuffers[0]);
+				pointCloud.lightInjection(rsmFramebuffers[i]);
 			}
 
 			pointCloud.geometryInjection(rsmFramebuffers[0], directionalLight);
@@ -646,6 +661,7 @@ function renderShadowMap() {
 			.uniform('u_light_projection_from_world', lightViewProjection)
 			.uniform('u_light_direction', lightDirection)
 			.uniform('u_light_color', lightColor)
+			.uniform('u_spot_light_position', light.source.position || vec3.fromValues(0,0,0))
 			.draw();
 		}
 	}
@@ -682,9 +698,6 @@ function renderScene(framebuffer) {
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
 	var shadowMap = shadowMapFramebuffer.depthTexture;
 
-	var spotLightViewPosition = lightSources[1].source.viewSpacePosition(camera);
-	var spotLightViewDirection = lightSources[1].source.viewSpaceDirection(camera);
-
 	app.defaultDrawFramebuffer()
 	.defaultViewport()
 	.depthTest()
@@ -694,26 +707,36 @@ function renderScene(framebuffer) {
 
 	for (var i = 0, len = meshes.length; i < len; ++i) {
 		var mesh = meshes[i];
-		mesh.drawCall
-		.uniform('u_world_from_local', mesh.modelMatrix)
-		.uniform('u_view_from_world', camera.viewMatrix)
-		.uniform('u_projection_from_view', camera.projectionMatrix)
-		.uniform('u_dir_light_color', directionalLight.color)
-		.uniform('u_dir_light_view_direction', dirLightViewDirection)
-		.uniform('u_light_projection_from_world', lightViewProjection)
-		.uniform('u_texture_size', pointCloud.framebufferSize)
-		.uniform('u_render_direct_light', settings.render_direct_light)
-		.uniform('u_render_indirect_light', settings.render_indirect_light)
-		.uniform('u_indirect_light_attenuation', settings.indirect_light_attenuation)
-		.uniform('u_spot_light_color', lightSources[1].source.color)
-		.uniform('u_spot_light_cone', lightSources[1].source.cone)
-		.uniform('u_spot_light_view_position', spotLightViewPosition)
-		.uniform('u_spot_light_view_direction', spotLightViewDirection)
-		.texture('u_shadow_map', shadowMap)
-		.texture('u_red_indirect_light', framebuffer.colorTextures[0])
-		.texture('u_green_indirect_light', framebuffer.colorTextures[1])
-		.texture('u_blue_indirect_light', framebuffer.colorTextures[2])
-		.draw();
+
+			for(var j = 1; j < lightSources.length; j++) {
+				var spotLightViewPosition = lightSources[j].source.viewSpacePosition(camera);
+				var spotLightViewDirection = lightSources[j].source.viewSpaceDirection(camera);
+				var spotLight = { color: lightSources[j].source.color, cone:lightSources[j].source.cone, view_position:spotLightViewPosition, view_direction:spotLightViewDirection};
+
+				mesh.drawCall
+				.uniform('u_spot_light[' + (j - 1) + '].color', spotLight.color)
+				.uniform('u_spot_light[' + (j - 1) + '].cone', spotLight.cone)
+				.uniform('u_spot_light[' + (j - 1) + '].view_position', spotLight.view_position)
+				.uniform('u_spot_light[' + (j - 1) + '].view_direction', spotLight.view_direction);
+			}
+			
+			mesh.drawCall
+			.uniform('u_world_from_local', mesh.modelMatrix)
+			.uniform('u_view_from_world', camera.viewMatrix)
+			.uniform('u_projection_from_view', camera.projectionMatrix)
+			.uniform('u_dir_light_color', directionalLight.color)
+			.uniform('u_dir_light_view_direction', dirLightViewDirection)
+			.uniform('u_light_projection_from_world', lightViewProjection)
+			.uniform('u_texture_size', pointCloud.framebufferSize)
+			.uniform('u_render_direct_light', settings.render_direct_light)
+			.uniform('u_render_indirect_light', settings.render_indirect_light)
+			.uniform('u_indirect_light_attenuation', settings.indirect_light_attenuation)
+			.texture('u_shadow_map', shadowMap)
+			.texture('u_red_indirect_light', framebuffer.colorTextures[0])
+			.texture('u_green_indirect_light', framebuffer.colorTextures[1])
+			.texture('u_blue_indirect_light', framebuffer.colorTextures[2])
+			.draw();
+
 
 	}
 

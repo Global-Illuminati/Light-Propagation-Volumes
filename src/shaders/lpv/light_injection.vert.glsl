@@ -3,8 +3,8 @@ precision highp float;
 
 layout(location = 0) in vec2 a_point_position;
 
-uniform int u_texture_size;
-uniform int u_rsm_size;
+uniform lowp int u_texture_size;
+uniform lowp int u_rsm_size;
 
 uniform vec3 u_light_direction;
 

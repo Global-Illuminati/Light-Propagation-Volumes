@@ -15,13 +15,17 @@ struct RSMTexel {
 	vec4 flux;
 };
 
+uniform lowp int u_texture_size;
+uniform lowp int u_rsm_size;
+
 in RSMTexel v_rsm_texel;
 
 //#define DEBUG_RENDER
 
 void main()
 {
-	vec4 SH_coeffs = (evalCosineLobeToDir(v_rsm_texel.world_normal)) / PI;
+	float surfelWeight = float(u_texture_size) / float(u_rsm_size);
+	vec4 SH_coeffs = (evalCosineLobeToDir(v_rsm_texel.world_normal) / PI) * surfelWeight;
 	vec4 shR = SH_coeffs * v_rsm_texel.flux.r;
 	vec4 shG = SH_coeffs * v_rsm_texel.flux.g;
 	vec4 shB = SH_coeffs * v_rsm_texel.flux.b;

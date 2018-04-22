@@ -10,6 +10,7 @@ uniform bool u_is_directional_light;
 uniform mat4 u_world_from_local;
 uniform vec3 u_light_direction;
 uniform vec3 u_light_color;
+uniform vec3 u_spot_light_position;
 
 in mat4 v_normal_matrix;
 in vec4 v_world_space_position;
@@ -21,6 +22,7 @@ in vec2 v_tex_coord;
 //TODO: double check flux calculation
 //#define USING_DIR_LIGHT
 
+
 void main()
 {
 	vec3 diffuse = texture(u_diffuse_map, v_tex_coord).rgb;
@@ -30,8 +32,11 @@ void main()
 
 	if(u_is_directional_light)
 		flux = vec4((u_light_color * diffuse), 1.0);
-	else
-		flux = vec4(u_light_color * diffuse * light_falloff, 1.0);
+	else {
+		vec3 light_to_frag = v_world_space_position.xyz - u_spot_light_position;
+		float distance_attenuation = 1.0 / max(0.01, lengthSquared(light_to_frag));
+		flux = vec4(u_light_color * diffuse * light_falloff * distance_attenuation , 1.0);
+	}
 	
 	o_color_map = flux;
 	o_position_map = v_world_space_position;

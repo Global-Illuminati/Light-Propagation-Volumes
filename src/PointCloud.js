@@ -100,10 +100,9 @@ RSMPointCloud.prototype = {
             if (this.injectionDrawCall && this.injectionFramebuffer) {
                app.drawFramebuffer(this.injectionFramebuffer)
 	            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
-	            .depthTest()
-	            .depthFunc(PicoGL.LEQUAL)
-	            .noBlend()
-                .clear();
+                .noDepthTest()
+                .blend()
+                .blendFunc(PicoGL.ONE, PicoGL.ONE);
 
                 this.injectionDrawCall
                 .texture('u_rsm_flux', rsmFlux)
@@ -152,6 +151,14 @@ RSMPointCloud.prototype = {
     clearAccumulatedBuffer() {
         app.drawFramebuffer(this.accumulatedBuffer)
             .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+            .clearColor(0,0,0,0)
+            .clear();
+    },
+
+    clearInjectionBuffer() {
+        app.drawFramebuffer(this.injectionFramebuffer)
+            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+            .clearColor(0,0,0,0)
             .clear();
     },
 

@@ -3,10 +3,7 @@ function SpotLight(position, direction, coneAngle, color) {
 
 	this.position = position || vec3.fromValues(0, 2, 0);
 	this.direction = direction || vec3.fromValues(0.3, -0.3, 0.3);
-	console.log(this.direction);
 	vec3.normalize(this.direction, this.direction);
-	console.log("after");
-	console.log(this.direction);
 
 	this.color = color || new Float32Array([1.5, 1.5, 1.5]);
 

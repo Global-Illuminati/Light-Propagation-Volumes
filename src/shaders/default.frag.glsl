@@ -27,10 +27,20 @@ uniform sampler2D u_shadow_map;
 uniform vec3 u_dir_light_color;
 uniform vec3 u_dir_light_view_direction;
 
-uniform vec3  u_spot_light_color;
+struct SpotLight {
+	vec3  color;
+	float cone;
+	vec3  view_position;
+	vec3  view_direction;
+};
+
+#define NUM_SPOTLIGHTS 2
+uniform SpotLight[NUM_SPOTLIGHTS] u_spot_light;
+
+/*uniform vec3  u_spot_light_color;
 uniform float u_spot_light_cone;
 uniform vec3  u_spot_light_view_position;
-uniform vec3  u_spot_light_view_direction;
+uniform vec3  u_spot_light_view_direction;*/
 
 // Light Propagation Volumes uniforms
 uniform int u_texture_size;
@@ -108,7 +118,7 @@ void main()
 	float shininess = texture(u_specular_map, v_tex_coord).r;
 
 	vec3 lpv_intensity = getLPVIntensity();
-	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b));
+	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b)) / PI;
 	vec3 indirect_light = diffuse * lpv_radiance;
 
 	vec3 wi = normalize(-u_dir_light_view_direction);
@@ -147,30 +157,31 @@ void main()
 
 	//////////////////////////////////////////////////////////
 	// spot light
+	for(int i = 0; i < NUM_SPOTLIGHTS; i++)
 	{
-		vec3 light_to_frag = v_position - u_spot_light_view_position;
+		vec3 light_to_frag = v_position - u_spot_light[i].view_position;
 		float distance_attenuation = 1.0 / max(0.01, lengthSquared(light_to_frag));
 
 		vec3 wi = normalize(-light_to_frag);
 		float lambertian = saturate(dot(N, wi));
 
 		const float smoothing = 0.15;
-		float inner = u_spot_light_cone - smoothing;
-		float outer = u_spot_light_cone;
-		float cone_attenuation = 1.0 - smoothstep(inner, outer, 1.0 - dot(-wi, u_spot_light_view_direction));
+		float inner = u_spot_light[i].cone - smoothing;
+		float outer = u_spot_light[i].cone;
+		float cone_attenuation = 1.0 - smoothstep(inner, outer, 1.0 - dot(-wi, u_spot_light[i].view_direction));
 
 		if (lambertian > 0.0 && cone_attenuation > 0.0)
 		{
 			vec3 wh = normalize(wi + wo);
 
 			// diffuse
-			color += diffuse * distance_attenuation * cone_attenuation * lambertian * u_spot_light_color;
+			color += diffuse * distance_attenuation * cone_attenuation * lambertian * u_spot_light[i].color;
 
 			// specular
 			float specular_angle = saturate(dot(N, wh));
 			float specular_power = pow(abs(2.0), 13.0 * shininess);
 			float specular = pow(abs(specular_angle), specular_power);
-			color += shininess * distance_attenuation * cone_attenuation * specular * u_spot_light_color;
+			color += shininess * distance_attenuation * cone_attenuation * specular * u_spot_light[i].color;
 		}
 	}
 
