@@ -48,7 +48,7 @@ MTLLoader.prototype = {
             } else if(key === 'Ka' || key === 'Kd' || key === 'Ks' || key === 'Ke' || key === 'Tf') {
                 var xyz = value.split(' ');
                 material.properties[key] = xyz;
-            } else if(key === 'Ns' || key === 'Ni' || key === 'd' || key === 'illum' || key === 'map_Kd' || key === 'map_Ks' || key == 'map_norm' || key === 'Tr') {
+            } else if(key === 'Ns' || key === 'Ni' || key === 'd' || key === 'illum' || key === 'map_Ka' || key === 'map_Kd' || key === 'map_d' || key === 'map_bump' || key === 'bump'|| key === 'map_Ks' || key === 'map_norm' || key === 'Tr') {
                 material.properties[key] = value;
             } else {
                 //Just a precaution, if things are working as they should, remove this
