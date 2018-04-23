@@ -5,3 +5,4 @@ Part of a bachelor's thesis focused on real-time rendering of global illuminatio
 ### Thesis:
 [Real-Time Global Illumination in Web-Browsers]()
 ### Images:
+  <img src="screenshots/2018-04-22,-complete-lpv.png" width="750"/>
