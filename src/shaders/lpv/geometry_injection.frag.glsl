@@ -16,12 +16,11 @@ struct RSMTexel {
 };
 
 in RSMTexel v_rsm_texel;
-flat in ivec3 v_volumeCellIndex;
-in float surfelArea;
+in float surfel_area;
 
 float calculateBlockingPotencial(vec3 dir, vec3 normal)
 {
-	return clamp((surfelArea * clamp(dot(normal, dir), 0.0, 1.0)) / (CELLSIZE * CELLSIZE), 0.0, 1.0); //It is probability so 0.0 - 1.0
+	return clamp((surfel_area * clamp(dot(normal, dir), 0.0, 1.0)) / (CELLSIZE * CELLSIZE), 0.0, 1.0); //It is probability so 0.0 - 1.0
 }
 
 //#define DEBUG_RENDER
@@ -33,10 +32,10 @@ void main()
 		discard;
 	}
 
-	vec3 lightDir = normalize(u_light_direction - v_rsm_texel.world_position); //Both are in world space
-	float blockingPotencial = calculateBlockingPotencial(lightDir, v_rsm_texel.world_normal);
+	vec3 light_dir = normalize(u_light_direction - v_rsm_texel.world_position); //Both are in world space
+	float blocking_potencial = calculateBlockingPotencial(light_dir, v_rsm_texel.world_normal);
 
-	vec4 SH_coeffs = evalCosineLobeToDir(v_rsm_texel.world_normal) * blockingPotencial;
+	vec4 SH_coeffs = evalCosineLobeToDir(v_rsm_texel.world_normal) * blocking_potencial;
 	vec4 shR = SH_coeffs * v_rsm_texel.flux.r;
     vec4 shG = SH_coeffs * v_rsm_texel.flux.g;
     vec4 shB = SH_coeffs * v_rsm_texel.flux.b;

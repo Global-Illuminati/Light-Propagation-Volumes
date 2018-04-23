@@ -22,8 +22,7 @@ struct RSMTexel
 };
 
 out RSMTexel v_rsm_texel;
-flat out ivec3 v_volumeCellIndex;
-out float surfelArea;
+out float surfel_area;
 
 RSMTexel getRSMTexel(ivec2 texCoord) 
 {
@@ -41,9 +40,9 @@ vec2 getRenderingTexCoords(ivec3 gridCell)
 {
 	float f_texture_size = float(u_texture_size);
 	// Displace int coordinates with 0.5
-	vec2 texCoords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
+	vec2 tex_coords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
 	// Get ndc coordinates
-	vec2 ndc = vec2((2.0 * texCoords.x) / (f_texture_size * f_texture_size), (2.0 * texCoords.y) / f_texture_size) - vec2(1.0);
+	vec2 ndc = vec2((2.0 * tex_coords.x) / (f_texture_size * f_texture_size), (2.0 * tex_coords.y) / f_texture_size) - vec2(1.0);
 	return ndc;
 }
 
@@ -52,16 +51,16 @@ float calculateSurfelAreaLight(vec3 lightPos)
 {
     float fov = 90.0f; //TODO fix correct fov
     float aspect = float(u_rsm_size / u_rsm_size);
-    float tanFovXHalf = tan(0.5 * fov * DEG_TO_RAD);
-    float tanFovYHalf = tan(0.5 * fov * DEG_TO_RAD) * aspect;
+    float tan_fov_x_half = tan(0.5 * fov * DEG_TO_RAD);
+    float tan_fov_y_half = tan(0.5 * fov * DEG_TO_RAD) * aspect;
 
-	return (4.0 * lightPos.z * lightPos.z * tanFovXHalf * tanFovYHalf) / float(u_rsm_size * u_rsm_size);
+	return (4.0 * lightPos.z * lightPos.z * tan_fov_x_half * tan_fov_y_half) / float(u_rsm_size * u_rsm_size);
 }
 
 void main()
 {
-	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
-	v_rsm_texel = getRSMTexel(rsmTexCoords);
+	ivec2 rsm_tex_coords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
+	v_rsm_texel = getRSMTexel(rsm_tex_coords);
 	ivec3 v_grid_cell = getGridCelli(v_rsm_texel.world_position, u_texture_size);
 
 	vec2 tex_coord = getRenderingTexCoords(v_grid_cell);
@@ -69,5 +68,5 @@ void main()
 	gl_PointSize = 1.0;
 	gl_Position = vec4(tex_coord, 0.0, 1.0);
 
-    surfelArea = calculateSurfelAreaLight(u_light_direction);
+    surfel_area = calculateSurfelAreaLight(u_light_direction);
 }
