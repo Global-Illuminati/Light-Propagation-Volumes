@@ -464,8 +464,9 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var probeIndices   = [];
 
 	var gridSize = lpvGridSize;
+	var cellSize = 2.0;
 	var origin = vec3.fromValues(0, 0, 0);
-	var step   = vec3.fromValues(1, 1, 1);
+	var step   = vec3.fromValues(cellSize, cellSize, cellSize);
 
 	var halfGridSize = vec3.fromValues(gridSize / 2, gridSize / 2, gridSize / 2);
 	var halfSize = vec3.mul(vec3.create(), step, halfGridSize);
@@ -759,7 +760,7 @@ function renderLpvCells(viewProjection) {
 		.texture('u_lpv_red', lpv.colorTextures[0])
 		.texture('u_lpv_green', lpv.colorTextures[1])
 		.texture('u_lpv_blue', lpv.colorTextures[2])
-		.uniform('u_lpv_size', shadowMapSmallSize)
+		.uniform('u_lpv_size', lpvGridSize)
 		.uniform('u_projection_from_world', viewProjection)
 		.draw();
 
