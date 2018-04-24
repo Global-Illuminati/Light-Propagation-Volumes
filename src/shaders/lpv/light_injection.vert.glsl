@@ -40,16 +40,16 @@ vec2 getRenderingTexCoords(ivec3 gridCell)
 {
 	float f_texture_size = float(u_texture_size);
 	// Displace int coordinates with 0.5
-	vec2 texCoords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
+	vec2 tex_coords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
 	// Get ndc coordinates
-	vec2 ndc = vec2((2.0 * texCoords.x) / (f_texture_size * f_texture_size), (2.0 * texCoords.y) / f_texture_size) - vec2(1.0);
+	vec2 ndc = vec2((2.0 * tex_coords.x) / (f_texture_size * f_texture_size), (2.0 * tex_coords.y) / f_texture_size) - vec2(1.0);
 	return ndc;
 }
 
 void main()
 {
-	ivec2 rsmTexCoords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
-	v_rsm_texel = getRSMTexel(rsmTexCoords);
+	ivec2 rsm_tex_coords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
+	v_rsm_texel = getRSMTexel(rsm_tex_coords);
 	v_grid_cell = getGridCelli(v_rsm_texel.world_position, u_texture_size);
 
 	vec2 tex_coord = getRenderingTexCoords(v_grid_cell);
