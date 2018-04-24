@@ -30,7 +30,7 @@ RSMTexel getRSMTexel(ivec2 texCoord)
 	texel.world_normal = texelFetch(u_rsm_world_normals, texCoord, 0).xyz;
 
 	// Displace the position by half a normal
-	texel.world_position = texelFetch(u_rsm_world_positions, texCoord, 0).xyz + 0.5 * texel.world_normal;
+	texel.world_position = texelFetch(u_rsm_world_positions, texCoord, 0).xyz + 0.5 * CELLSIZE * texel.world_normal;
 	texel.flux = texelFetch(u_rsm_flux, texCoord, 0);
 	return texel;
 }

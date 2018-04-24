@@ -45,7 +45,7 @@ var shadowMapSmallSize = 512;
 var rsmFramebuffers = [];
 
 var initLPV = false;
-var lpvGridSize = 128;
+var lpvGridSize = 64;
 var propagationIterations = lpvGridSize / 16;
 
 var camera;
@@ -211,11 +211,11 @@ function init() {
 	addDirectionalLight();
 	directionalLight = lightSources[0].source;
 	var spotPos = vec3.fromValues(-5, 2.2, -8);
-	var spotDir = vec3.fromValues(0, 0, 1);
+	var spotDir = vec3.fromValues(0, 0, -1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
 	spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
-	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));
+	//addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));
 
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	for(var i = 0; i < lightSources.length; i++) {
@@ -464,7 +464,7 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var probeIndices   = [];
 
 	var gridSize = lpvGridSize;
-	var cellSize = 2.0;
+	var cellSize = 1.0;
 	var origin = vec3.fromValues(0, 0, 0);
 	var step   = vec3.fromValues(cellSize, cellSize, cellSize);
 
@@ -661,6 +661,7 @@ function renderShadowMap() {
 			.uniform('u_world_from_local', mesh.modelMatrix)
 			.uniform('u_light_projection_from_world', lightViewProjection)
 			.uniform('u_light_direction', lightDirection)
+			.uniform('u_spot_light_cone', light.source.cone)
 			.uniform('u_light_color', lightColor)
 			.uniform('u_spot_light_position', light.source.position || vec3.fromValues(0,0,0))
 			.draw();
@@ -685,7 +686,7 @@ function renderShadowMap() {
 		mesh.shadowMapDrawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_light_projection_from_world', lightViewProjection)
-		.uniform('u_light_direction', lightViewDirection)
+		.uniform('u_light_direction', lightDirection)
 		.uniform('u_light_color', lightColor)
 		.draw();
 
