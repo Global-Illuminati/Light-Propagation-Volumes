@@ -13,7 +13,7 @@ uniform vec3 u_light_color;
 uniform vec3 u_spot_light_position;
 uniform float u_spot_light_cone;
 
-in mat4 v_normal_matrix;
+in vec3 v_world_space_normal;
 in vec4 v_world_space_position;
 in vec3 v_normal;
 in vec2 v_tex_coord;
@@ -27,7 +27,6 @@ in vec2 v_tex_coord;
 void main()
 {
 	vec3 diffuse = texture(u_diffuse_map, v_tex_coord).rgb;
-	vec3 world_normal = u_light_color * normalize(v_normal_matrix * vec4(v_normal, 0.0)).xyz;
 	vec4 flux = vec4(0.0);
 
 	if(u_is_directional_light)
@@ -41,10 +40,11 @@ void main()
 		vec3 light_to_frag = v_world_space_position.xyz - u_spot_light_position;
 		float cone_attenuation = 1.0 - smoothstep(inner, outer, 1.0 - dot(normalize(light_to_frag), u_light_direction));
 		float distance_attenuation = 1.0 / max(0.01, lengthSquared(light_to_frag));
-		flux = vec4(u_light_color * diffuse * distance_attenuation * cone_attenuation * 0.25, 1.0);
+		
+		flux = vec4(u_light_color * diffuse * distance_attenuation * cone_attenuation, 1.0);
 	}
 	
 	o_color_map = flux;
 	o_position_map = v_world_space_position;
-	o_normal_map = vec4(world_normal, 1.0);
+	o_normal_map = vec4(v_world_space_normal, 1.0);
 }

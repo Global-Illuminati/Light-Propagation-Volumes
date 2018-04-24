@@ -152,6 +152,7 @@ RSMPointCloud.prototype = {
         app.drawFramebuffer(this.accumulatedBuffer)
             .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
             .clearColor(0,0,0,0)
+            .noBlend()
             .clear();
     },
 
@@ -159,16 +160,26 @@ RSMPointCloud.prototype = {
         app.drawFramebuffer(this.injectionFramebuffer)
             .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
             .clearColor(0,0,0,0)
+            .noBlend()
             .clear();
     },
 
     lightPropagation(_propagationIterations) {
+
+        app.drawFramebuffer(this.accumulatedBuffer)
+            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
+            .noBlend();
+
+        framebufferCopyDrawCall
+        .texture('u_texture_red', this.injectionFramebuffer.colorTextures[0])
+        .texture('u_texture_green', this.injectionFramebuffer.colorTextures[1])
+        .texture('u_texture_blue', this.injectionFramebuffer.colorTextures[2])
+        .draw();
         
         let LPVS = [ this.injectionFramebuffer, this.propagationFramebuffer ];
-        const propagationIterations = _propagationIterations || 12;
         let lpvIndex;
 
-        for (let i = 0; i < propagationIterations; i++) {
+        for (let i = 0; i < _propagationIterations; i++) {
             //if even, return 0
             lpvIndex = i & 1;
             var readLPV = LPVS[lpvIndex];

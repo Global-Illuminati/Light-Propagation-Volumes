@@ -165,6 +165,8 @@ function loadObject(directory, objFilename, mtlFilename, modelMatrix) {
 ////////////////////////////////////////////////////////////////////////////////
 // Initialization etc.
 
+var framebufferCopyDrawCall;
+
 function init() {
 
 	if (!checkWebGL2Compability()) {
@@ -211,11 +213,11 @@ function init() {
 	addDirectionalLight();
 	directionalLight = lightSources[0].source;
 	var spotPos = vec3.fromValues(-5, 2.2, -8);
-	var spotDir = vec3.fromValues(0, 0, -1);
+	var spotDir = vec3.fromValues(0, 0, 1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
 	spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
-	//addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));
+	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));
 
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	for(var i = 0; i < lightSources.length; i++) {
@@ -235,6 +237,7 @@ function init() {
 	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
 	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
 	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
+	shaderLoader.addShaderProgram('framebufferCopy', 'screen_space.vert.glsl', 'lpv/framebuffer_copy.frag.glsl');
 	shaderLoader.addShaderProgram('shadowMapping', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
 	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_injection.vert.glsl', 'lpv/light_injection.frag.glsl');
 	shaderLoader.addShaderProgram('lightPropagation', 'lpv/light_propagation.vert.glsl', 'lpv/light_propagation.frag.glsl');
@@ -246,6 +249,9 @@ function init() {
 
 		var textureBlitShader = makeShader('textureBlit', data);
 		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
+
+		var fbCopyShader = makeShader('framebufferCopy', data);
+		framebufferCopyDrawCall = app.createDrawCall(fbCopyShader, fullscreenVertexArray);
 
 		var lightInjectShader = makeShader('lightInjection', data);
         var geometryInjectShader = makeShader('geometryInjection', data);
@@ -464,7 +470,7 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var probeIndices   = [];
 
 	var gridSize = lpvGridSize;
-	var cellSize = 1.0;
+	var cellSize = 2.0;
 	var origin = vec3.fromValues(0, 0, 0);
 	var step   = vec3.fromValues(cellSize, cellSize, cellSize);
 
@@ -570,7 +576,7 @@ function render() {
 			console.timeEnd('LPV');
 		}
 		if (pointCloud.accumulatedBuffer)
-			renderScene(pointCloud.accumulatedBuffer);
+			renderScene(pointCloud.injectionFramebuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 
@@ -585,7 +591,7 @@ function render() {
 		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
         //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
-		//renderTextureToScreen(rsmFramebuffers[1].colorTextures[0]);
+		//renderTextureToScreen(rsmFramebuffers[0].colorTextures[2]);
 
 	}
 	picoTimer.end();
