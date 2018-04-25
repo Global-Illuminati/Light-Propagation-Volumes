@@ -47,7 +47,7 @@ var rsmFramebuffers = [];
 
 var initLPV = false;
 var lpvGridSize = 64;
-var propagationIterations = lpvGridSize / 16;
+var propagationIterations = lpvGridSize;
 
 var camera;
 
@@ -171,8 +171,6 @@ function loadObject(directory, objFilename, mtlFilename, modelMatrix) {
 ////////////////////////////////////////////////////////////////////////////////
 // Initialization etc.
 
-var framebufferCopyDrawCall;
-
 function init() {
 
 	if (!checkWebGL2Compability()) {
@@ -243,7 +241,6 @@ function init() {
 	shaderLoader.addShaderProgram('default', 'default.vert.glsl', 'default.frag.glsl');
 	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
 	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
-	shaderLoader.addShaderProgram('framebufferCopy', 'screen_space.vert.glsl', 'lpv/framebuffer_copy.frag.glsl');
 	shaderLoader.addShaderProgram('shadowMapping', 'shadow_mapping.vert.glsl', 'shadow_mapping.frag.glsl');
 	shaderLoader.addShaderProgram('RSM', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
 	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_injection.vert.glsl', 'lpv/light_injection.frag.glsl');
@@ -256,9 +253,6 @@ function init() {
 
 		var textureBlitShader = makeShader('textureBlit', data);
 		blitTextureDrawCall = app.createDrawCall(textureBlitShader, fullscreenVertexArray);
-
-		var fbCopyShader = makeShader('framebufferCopy', data);
-		framebufferCopyDrawCall = app.createDrawCall(fbCopyShader, fullscreenVertexArray);
 
 		var lightInjectShader = makeShader('lightInjection', data);
         var geometryInjectShader = makeShader('geometryInjection', data);
@@ -591,7 +585,6 @@ function render() {
 			if(pointCloud.accumulatedBuffer && pointCloud.injectionFramebuffer) {
 				pointCloud.clearInjectionBuffer();
 				pointCloud.clearAccumulatedBuffer();
-
 			}
 
 			console.time('LPV');
@@ -605,6 +598,7 @@ function render() {
 			initLPV = false;
 			console.timeEnd('LPV');
 		}
+
 		if (pointCloud.accumulatedBuffer)
 			renderScene(pointCloud.accumulatedBuffer);
 

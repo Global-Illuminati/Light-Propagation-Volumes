@@ -165,16 +165,6 @@ RSMPointCloud.prototype = {
     },
 
     lightPropagation(_propagationIterations) {
-
-        app.drawFramebuffer(this.accumulatedBuffer)
-            .viewport(0, 0, this.framebufferSize * this.framebufferSize, this.framebufferSize)
-            .noBlend();
-
-        framebufferCopyDrawCall
-        .texture('u_texture_red', this.injectionFramebuffer.colorTextures[0])
-        .texture('u_texture_green', this.injectionFramebuffer.colorTextures[1])
-        .texture('u_texture_blue', this.injectionFramebuffer.colorTextures[2])
-        .draw();
         
         let LPVS = [ this.injectionFramebuffer, this.propagationFramebuffer ];
         let lpvIndex;
