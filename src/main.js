@@ -47,7 +47,7 @@ var rsmFramebuffers = [];
 
 var initLPV = false;
 var lpvGridSize = 64;
-var propagationIterations = lpvGridSize;
+var propagationIterations = lpvGridSize / 16;
 
 var camera;
 
