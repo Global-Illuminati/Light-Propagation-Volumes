@@ -7,7 +7,6 @@ layout(location = 2) out vec4 o_normal_map;
 
 uniform sampler2D u_diffuse_map;
 uniform bool u_is_directional_light;
-uniform mat4 u_world_from_local;
 uniform vec3 u_light_direction;
 uniform vec3 u_light_color;
 uniform vec3 u_spot_light_position;
@@ -15,14 +14,9 @@ uniform float u_spot_light_cone;
 
 in vec3 v_world_space_normal;
 in vec4 v_world_space_position;
-in vec3 v_normal;
 in vec2 v_tex_coord;
 
 #include <common.glsl>
-
-//TODO: double check flux calculation
-//#define USING_DIR_LIGHT
-
 
 void main()
 {

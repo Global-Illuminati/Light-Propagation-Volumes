@@ -109,7 +109,7 @@ RSMPointCloud.prototype = {
                 .texture('u_rsm_world_positions', rsmPositions)
                 .texture('u_rsm_world_normals', rsmNormals)
                 .uniform('u_rsm_size', this.size)
-                .uniform('u_texture_size', this.framebufferSize)
+                .uniform('u_grid_size', this.framebufferSize)
                 .draw();
                 
                 this.injectionFinished = true;

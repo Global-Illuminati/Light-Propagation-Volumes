@@ -4,10 +4,6 @@ precision highp float;
 #include <common.glsl>
 #include <lpv_common.glsl>
 
-//
-// NOTE: All fragment calculations are in *view space*
-//
-
 in vec3 v_position;
 in vec3 v_normal;
 in vec3 v_tangent;
@@ -37,13 +33,8 @@ struct SpotLight {
 #define NUM_SPOTLIGHTS 2
 uniform SpotLight[NUM_SPOTLIGHTS] u_spot_light;
 
-/*uniform vec3  u_spot_light_color;
-uniform float u_spot_light_cone;
-uniform vec3  u_spot_light_view_position;
-uniform vec3  u_spot_light_view_direction;*/
-
 // Light Propagation Volumes uniforms
-uniform int u_texture_size;
+uniform int u_lpv_grid_size;
 uniform float u_indirect_light_attenuation;
 
 uniform bool u_render_direct_light;
@@ -57,7 +48,7 @@ layout(location = 0) out vec4 o_color;
 
 vec4 sample_grid_trilinear(in sampler2D t, vec3 texCoord) {
 	ivec3 x0y0z0 = ivec3(floor(texCoord.x), floor(texCoord.y), floor(texCoord.z));
-	ivec2 fetchCoords = ivec2(x0y0z0.x + (x0y0z0.z * u_texture_size), x0y0z0.y);
+	ivec2 fetchCoords = ivec2(x0y0z0.x + (x0y0z0.z * u_lpv_grid_size), x0y0z0.y);
 
 	vec4 bl1 = texelFetch(t, fetchCoords, 0);
 	vec4 br1 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
@@ -69,7 +60,7 @@ vec4 sample_grid_trilinear(in sampler2D t, vec3 texCoord) {
 	vec4 t1 = mix(tl1, tr1, texCoord.x - float(x0y0z0.x));
 	vec4 r1 = mix(b1, t1, texCoord.y - float(x0y0z0.y));
 
-	fetchCoords = ivec2(x0y0z0.x + ((x0y0z0.z + 1) * u_texture_size), x0y0z0.y);
+	fetchCoords = ivec2(x0y0z0.x + ((x0y0z0.z + 1) * u_lpv_grid_size), x0y0z0.y);
 
 	vec4 bl2 = texelFetch(t, fetchCoords, 0);
 	vec4 br2 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
@@ -84,17 +75,17 @@ vec4 sample_grid_trilinear(in sampler2D t, vec3 texCoord) {
 	return mix(r1, r2, texCoord.z - float(x0y0z0.z));
 }
 
-vec3 getLPVIntensity()
+vec3 get_lpv_intensity()
 {
-	vec4 shIntensity = dirToSH(-v_world_space_normal);
-	vec3 gridCell = getGridCellf(v_world_space_position.xyz, u_texture_size);
+	vec4 sh_intensity = dirToSH(-v_world_space_normal);
+	vec3 grid_cell = getGridCellf(v_world_space_position.xyz, u_lpv_grid_size);
 
-	vec4 redLight = sample_grid_trilinear(u_red_indirect_light, gridCell);
-	vec4 greenLight = sample_grid_trilinear(u_green_indirect_light, gridCell);
-	vec4 blueLight = sample_grid_trilinear(u_blue_indirect_light, gridCell);
+	vec4 red_light = sample_grid_trilinear(u_red_indirect_light, grid_cell);
+	vec4 green_light = sample_grid_trilinear(u_green_indirect_light, grid_cell);
+	vec4 blue_light = sample_grid_trilinear(u_blue_indirect_light, grid_cell);
 
 	// Dot with sh coeffiencients to get directioal light intesity from the normal
-	return vec3(dot(shIntensity, redLight), dot(shIntensity, greenLight), dot(shIntensity, blueLight));
+	return vec3(dot(sh_intensity, red_light), dot(sh_intensity, green_light), dot(sh_intensity, blue_light));
 }
 
 void main()
@@ -117,7 +108,7 @@ void main()
 	vec3 diffuse = texture(u_diffuse_map, v_tex_coord).rgb;
 	float shininess = texture(u_specular_map, v_tex_coord).r;
 
-	vec3 lpv_intensity = getLPVIntensity();
+	vec3 lpv_intensity = get_lpv_intensity();
 	vec3 lpv_radiance = vec3(max(0.0, lpv_intensity.r), max(0.0, lpv_intensity.g), max(0.0, lpv_intensity.b)) / PI;
 	vec3 indirect_light = diffuse * lpv_radiance;
 

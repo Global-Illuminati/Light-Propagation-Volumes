@@ -3,10 +3,8 @@ precision highp float;
 
 layout(location = 0) in vec2 a_point_position;
 
-uniform lowp int u_texture_size;
+uniform lowp int u_grid_size;
 uniform lowp int u_rsm_size;
-
-uniform vec3 u_light_direction;
 
 uniform sampler2D u_rsm_flux;
 uniform sampler2D u_rsm_world_positions;
@@ -22,9 +20,8 @@ struct RSMTexel
 };
 
 out RSMTexel v_rsm_texel;
-flat out ivec3 v_grid_cell;
 
-RSMTexel getRSMTexel(ivec2 texCoord) 
+RSMTexel get_rsm_texel(ivec2 texCoord) 
 {
 	RSMTexel texel;
 	texel.world_normal = texelFetch(u_rsm_world_normals, texCoord, 0).xyz;
@@ -36,11 +33,11 @@ RSMTexel getRSMTexel(ivec2 texCoord)
 }
 
 // Get ndc texture coordinates from gridcell
-vec2 getRenderingTexCoords(ivec3 gridCell)
+vec2 get_grid_output_position(ivec3 gridCell)
 {
-	float f_texture_size = float(u_texture_size);
+	float f_texture_size = float(u_grid_size);
 	// Displace int coordinates with 0.5
-	vec2 tex_coords = vec2((gridCell.x % u_texture_size) + u_texture_size * gridCell.z, gridCell.y) + vec2(0.5);
+	vec2 tex_coords = vec2((gridCell.x % u_grid_size) + u_grid_size * gridCell.z, gridCell.y) + vec2(0.5);
 	// Get ndc coordinates
 	vec2 ndc = vec2((2.0 * tex_coords.x) / (f_texture_size * f_texture_size), (2.0 * tex_coords.y) / f_texture_size) - vec2(1.0);
 	return ndc;
@@ -49,10 +46,10 @@ vec2 getRenderingTexCoords(ivec3 gridCell)
 void main()
 {
 	ivec2 rsm_tex_coords = ivec2(gl_VertexID % u_rsm_size, gl_VertexID / u_rsm_size);
-	v_rsm_texel = getRSMTexel(rsm_tex_coords);
-	v_grid_cell = getGridCelli(v_rsm_texel.world_position, u_texture_size);
+	v_rsm_texel = get_rsm_texel(rsm_tex_coords);
+	ivec3 grid_cell = getGridCelli(v_rsm_texel.world_position, u_grid_size);
 
-	vec2 tex_coord = getRenderingTexCoords(v_grid_cell);
+	vec2 tex_coord = get_grid_output_position(grid_cell);
 
 	gl_PointSize = 1.0;
 	gl_Position = vec4(tex_coord, 0.0, 1.0);

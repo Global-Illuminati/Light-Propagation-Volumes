@@ -29,7 +29,8 @@ var gpuTimePanel;
 var picoTimer;
 
 var defaultShader;
-var shadowMapShader;
+var rsmShader;
+var simpleShadowMapShader;
 
 var pointCloud;
 
@@ -141,19 +142,24 @@ function loadObject(directory, objFilename, mtlFilename, modelMatrix) {
 
 				var vertexArray = createVertexArrayFromMeshInfo(object);
 
+				var diffuseTexture = loadTexture(diffuseMap);
+
 				var drawCall = app.createDrawCall(defaultShader, vertexArray)
 				.uniformBlock('SceneUniforms', sceneUniforms)
-				.texture('u_diffuse_map', loadTexture(diffuseMap))
+				.texture('u_diffuse_map', diffuseTexture)
 				.texture('u_specular_map', loadTexture(specularMap))
 				.texture('u_normal_map', loadTexture(normalMap));
 
-				var shadowMappingDrawCall = app.createDrawCall(shadowMapShader, vertexArray)
-				.texture('u_diffuse_map', loadTexture(diffuseMap));
+				var shadowMappingDrawCall = app.createDrawCall(simpleShadowMapShader, vertexArray);
+
+				var rsmDrawCall = app.createDrawCall(rsmShader, vertexArray)
+				.texture('u_diffuse_map', diffuseTexture);
 
 				meshes.push({
 					modelMatrix: modelMatrix || mat4.create(),
 					drawCall: drawCall,
-					shadowMapDrawCall: shadowMappingDrawCall
+					shadowMapDrawCall: shadowMappingDrawCall,
+					rsmDrawCall: rsmDrawCall
 				});
 
 			});
@@ -221,7 +227,7 @@ function init() {
 
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	for(var i = 0; i < lightSources.length; i++) {
-		rsmFramebuffers.push(setupDirectionalLightShadowMapFramebuffer(shadowMapSmallSize));
+		rsmFramebuffers.push(setupRSMFramebuffer(shadowMapSmallSize));
 	}
 
 	setupSceneUniforms();
@@ -238,7 +244,8 @@ function init() {
 	shaderLoader.addShaderProgram('environment', 'environment.vert.glsl', 'environment.frag.glsl');
 	shaderLoader.addShaderProgram('textureBlit', 'screen_space.vert.glsl', 'texture_blit.frag.glsl');
 	shaderLoader.addShaderProgram('framebufferCopy', 'screen_space.vert.glsl', 'lpv/framebuffer_copy.frag.glsl');
-	shaderLoader.addShaderProgram('shadowMapping', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
+	shaderLoader.addShaderProgram('shadowMapping', 'shadow_mapping.vert.glsl', 'shadow_mapping.frag.glsl');
+	shaderLoader.addShaderProgram('RSM', 'lpv/reflective_shadow_map.vert.glsl', 'lpv/reflective_shadow_map.frag.glsl');
 	shaderLoader.addShaderProgram('lightInjection', 'lpv/light_injection.vert.glsl', 'lpv/light_injection.frag.glsl');
 	shaderLoader.addShaderProgram('lightPropagation', 'lpv/light_propagation.vert.glsl', 'lpv/light_propagation.frag.glsl');
     shaderLoader.addShaderProgram('geometryInjection', 'lpv/geometry_injection.vert.glsl', 'lpv/geometry_injection.frag.glsl');
@@ -269,7 +276,8 @@ function init() {
 		setupProbeDrawCall(probeVertexArray, lpvDebugShader);
 
 		defaultShader = makeShader('default', data);
-		shadowMapShader = makeShader('shadowMapping', data);
+		rsmShader = makeShader('RSM', data);
+		simpleShadowMapShader = makeShader('shadowMapping', data);
 		loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
 		//loadObject('sponza_crytek/', 'sponza.obj', 'sponza.mtl');
 		/*
@@ -374,8 +382,30 @@ function createSphereVertexArray(radius, rings, sectors) {
 
 }
 
+function setupDirectionalLightShadowMapFramebuffer(size) {
+
+	var colorBuffer = app.createTexture2D(size, size, {
+		format: PicoGL.RED,
+		internalFormat: PicoGL.R16F,
+		type: PicoGL.FLOAT,
+		minFilter: PicoGL.NEAREST,
+		magFilter: PicoGL.NEAREST
+	});
+
+	var depthBuffer = app.createTexture2D(size, size, {
+		format: PicoGL.DEPTH_COMPONENT,
+		internalFormat: PicoGL.DEPTH_COMPONENT32F
+	});
+
+	var framebuffer = app.createFramebuffer()
+	.colorTarget(0, colorBuffer)
+	.depthTarget(depthBuffer);
+
+	return framebuffer;
+}
+
 function
-setupDirectionalLightShadowMapFramebuffer(size) {
+setupRSMFramebuffer(size) {
 	var colorBuffer = app.createTexture2D(size, size, {
 		type: PicoGL.FLOAT,
 		internalFormat: PicoGL.RBGA32F,
@@ -576,7 +606,7 @@ function render() {
 			console.timeEnd('LPV');
 		}
 		if (pointCloud.accumulatedBuffer)
-			renderScene(pointCloud.injectionFramebuffer);
+			renderScene(pointCloud.accumulatedBuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 
@@ -662,7 +692,7 @@ function renderShadowMap() {
 
 			var mesh = meshes[j];
 
-			mesh.shadowMapDrawCall
+			mesh.rsmDrawCall
 			.uniform('u_is_directional_light', light.type === 'DIRECTIONAL_LIGHT')
 			.uniform('u_world_from_local', mesh.modelMatrix)
 			.uniform('u_light_projection_from_world', lightViewProjection)
@@ -675,8 +705,6 @@ function renderShadowMap() {
 	}
 
 	var lightViewProjection = directionalLight.getLightViewProjectionMatrix();
-	var lightViewDirection = directionalLight.viewSpaceDirection(camera);
-	var lightColor = directionalLight.color;
 
 	app.drawFramebuffer(shadowMapFramebuffer)
 	.viewport(0, 0, shadowMapSize, shadowMapSize)
@@ -692,8 +720,6 @@ function renderShadowMap() {
 		mesh.shadowMapDrawCall
 		.uniform('u_world_from_local', mesh.modelMatrix)
 		.uniform('u_light_projection_from_world', lightViewProjection)
-		.uniform('u_light_direction', lightDirection)
-		.uniform('u_light_color', lightColor)
 		.draw();
 
 	}
@@ -735,7 +761,7 @@ function renderScene(framebuffer) {
 			.uniform('u_dir_light_color', directionalLight.color)
 			.uniform('u_dir_light_view_direction', dirLightViewDirection)
 			.uniform('u_light_projection_from_world', lightViewProjection)
-			.uniform('u_texture_size', pointCloud.framebufferSize)
+			.uniform('u_lpv_grid_size', pointCloud.framebufferSize)
 			.uniform('u_render_direct_light', settings.render_direct_light)
 			.uniform('u_render_indirect_light', settings.render_indirect_light)
 			.uniform('u_indirect_light_attenuation', settings.indirect_light_attenuation)

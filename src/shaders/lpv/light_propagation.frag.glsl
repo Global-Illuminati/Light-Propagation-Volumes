@@ -57,7 +57,7 @@ const ivec2 sideFaces[4] = ivec2[] (
     ivec2(0, -1)   // down
 );
 
-vec3 getEvalSideDirection(int index, mat3 orientation)
+vec3 get_eval_side_direction(int index, mat3 orientation)
 {
     const float small_component = 0.4472135; // 1 / sqrt(5)
     const float big_component = 0.894427; // 2 / sqrt(5)
@@ -66,7 +66,7 @@ vec3 getEvalSideDirection(int index, mat3 orientation)
     return orientation * vec3(current_side.x * small_component, current_side.y * small_component, big_component);
 }
 
-vec3 getReprojSideDirection(int index, mat3 orientation)
+vec3 get_reproj_side_direction(int index, mat3 orientation)
 {
     ivec2 current_side = sideFaces[index];
     return orientation * vec3(current_side.x, current_side.y, 0);
@@ -133,8 +133,8 @@ void propagate()
         // Add contributions of faces of neighbour
         for (int face = 0; face < 4; face++)
         {
-            vec3 eval_direction = getEvalSideDirection(face, orientation);
-            vec3 reproj_direction = getReprojSideDirection(face, orientation);
+            vec3 eval_direction = get_eval_side_direction(face, orientation);
+            vec3 reproj_direction = get_reproj_side_direction(face, orientation);
 
             // No occlusion in the first step
             if (!u_first_iteration) {
