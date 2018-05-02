@@ -47,7 +47,7 @@ var rsmFramebuffers = [];
 
 var initLPV = false;
 var lpvGridSize = 64;
-var propagationIterations = lpvGridSize / 16;
+var propagationIterations = 12;
 
 var camera;
 
@@ -88,6 +88,23 @@ function checkWebGL2Compability() {
 	}
 	return true;
 
+}
+
+function makeSingleColorTexture(color) {
+    var options = {};
+    options['minFilter'] = PicoGL.NEAREST;
+    options['magFilter'] = PicoGL.NEAREST;
+    options['mipmaps'] = false;
+    options['format'] = PicoGL.RGB;
+    options['internalFormat'] = PicoGL.RGB32F;
+    options['type'] = PicoGL.FLOAT;
+    var side = 32;
+    var arr =  [];
+    for (var i = 0; i < side*side; i++) {
+    	arr = arr.concat(color);
+	}
+    var image_data = new Float32Array( arr );
+    return app.createTexture2D(image_data, side, side, options);
 }
 
 function loadTexture(imageName, options) {
@@ -136,13 +153,16 @@ function loadObject(directory, objFilename, mtlFilename, modelMatrix) {
 			objects.forEach(function(object) {
 
 				var material = materials[object.material];
-				var diffuseMap  = (material.properties.map_Kd)   ? directory + material.properties.map_Kd   : 'default_diffuse.png';
+				var diffuseTexture;
+				if (material.properties.map_Kd) {
+                    diffuseTexture = loadTexture(directory + material.properties.map_Kd);
+                } else {
+					diffuseTexture = makeSingleColorTexture(material.properties.Kd);
+				}
 				var specularMap = (material.properties.map_Ks)   ? directory + material.properties.map_Ks   : 'default_specular.jpg';
 				var normalMap   = (material.properties.map_norm) ? directory + material.properties.map_norm : 'default_normal.jpg';
 
 				var vertexArray = createVertexArrayFromMeshInfo(object);
-
-				var diffuseTexture = loadTexture(diffuseMap);
 
 				var drawCall = app.createDrawCall(defaultShader, vertexArray)
 				.uniformBlock('SceneUniforms', sceneUniforms)
@@ -216,12 +236,12 @@ function init() {
 
 	addDirectionalLight();
 	directionalLight = lightSources[0].source;
-	var spotPos = vec3.fromValues(-5, 2.2, -8);
-	var spotDir = vec3.fromValues(0, 0, 1);
+	var spotPos = vec3.fromValues(-3.2, 2.2, 0.5);
+	var spotDir = vec3.fromValues(-1, 0, 0.3);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
-	spotPos = vec3.fromValues(-5, 2.2, 8);
+	/*spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
-	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));
+	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));*/
 
 	shadowMapFramebuffer = setupDirectionalLightShadowMapFramebuffer(shadowMapSize);
 	for(var i = 0; i < lightSources.length; i++) {
@@ -273,6 +293,14 @@ function init() {
 		rsmShader = makeShader('RSM', data);
 		simpleShadowMapShader = makeShader('shadowMapping', data);
 		loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
+		/*{
+			let m = mat4.create();
+			let r = quat.fromEuler(quat.create(), 0, 0, 0);
+			let t = vec3.fromValues(0, 0, -7);
+			let s = vec3.fromValues(1.8, 1.8, 1.8);
+			mat4.fromRotationTranslationScale(m, r, t, s);
+			loadObject('living_room/', 'living_room.obj', 'living_room.mtl', m);		
+		}*/
 		//loadObject('sponza_crytek/', 'sponza.obj', 'sponza.mtl');
 		/*
 		{
