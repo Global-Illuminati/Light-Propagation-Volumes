@@ -643,7 +643,7 @@ function render() {
 		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
         //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
-		//renderTextureToScreen(rsmFramebuffers[0].colorTextures[2]);
+		//renderTextureToScreen(rsmFramebuffers[1].colorTextures[0]);
 
 	}
 	picoTimer.end();

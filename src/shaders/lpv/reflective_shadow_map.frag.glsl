@@ -37,7 +37,10 @@ void main()
 		
 		flux = vec4(u_light_color * diffuse * distance_attenuation * cone_attenuation, 1.0);
 	}
-	
+	float light_falloff = saturate(dot(-v_world_space_normal, u_light_direction));
+	flux.rbg *= light_falloff;
+
+
 	o_color_map = flux;
 	o_position_map = v_world_space_position;
 	o_normal_map = vec4(v_world_space_normal, 1.0);
