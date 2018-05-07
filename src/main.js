@@ -46,7 +46,7 @@ var shadowMapSmallSize = 512;
 var rsmFramebuffers = [];
 
 var initLPV = false;
-var lpvGridSize = 64;
+var lpvGridSize = 32;
 var propagationIterations = 12;
 
 var camera;

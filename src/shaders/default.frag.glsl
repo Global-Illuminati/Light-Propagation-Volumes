@@ -31,7 +31,9 @@ struct SpotLight {
 };
 
 #define NUM_SPOTLIGHTS 2
+#if NUM_SPOTLIGHTS
 uniform SpotLight[NUM_SPOTLIGHTS] u_spot_light;
+#endif
 
 // Light Propagation Volumes uniforms
 uniform int u_lpv_grid_size;
@@ -148,6 +150,7 @@ void main()
 
 	//////////////////////////////////////////////////////////
 	// spot light
+	#if NUM_SPOTLIGHTS
 	for(int i = 0; i < NUM_SPOTLIGHTS; i++)
 	{
 		vec3 light_to_frag = v_position - u_spot_light[i].view_position;
@@ -175,6 +178,7 @@ void main()
 			color += shininess * distance_attenuation * cone_attenuation * specular * u_spot_light[i].color;
 		}
 	}
+	#endif
 
 	// Output tangents
 	if(u_render_direct_light && u_render_indirect_light)
