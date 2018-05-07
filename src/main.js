@@ -238,7 +238,7 @@ function init() {
 	directionalLight = lightSources[0].source;
 	var spotPos = vec3.fromValues(-3.2, 2.2, 0.5);
 	var spotDir = vec3.fromValues(-1, 0, 0.3);
-	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
+	//addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
 	/*spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));*/
@@ -292,7 +292,15 @@ function init() {
 		defaultShader = makeShader('default', data);
 		rsmShader = makeShader('RSM', data);
 		simpleShadowMapShader = makeShader('shadowMapping', data);
-		loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
+		//loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
+		{
+			let m = mat4.create();
+			let r = quat.fromEuler(quat.create(), 0, 0, 0);
+			let t = vec3.fromValues(0, 0, 0);
+			let s = vec3.fromValues(1, 1, 1);
+			mat4.fromRotationTranslationScale(m, r, t, s);
+			loadObject('sponza_with_teapot/', 'sponza_with_teapot.obj', 'sponza_with_teapot.mtl', m);		
+		}
 		/*{
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 0, 0);
