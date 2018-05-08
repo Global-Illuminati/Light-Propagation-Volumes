@@ -107,6 +107,12 @@ function makeSingleColorTexture(color) {
     return app.createTexture2D(image_data, side, side, options);
 }
 
+function isDataTexture(imageName) {
+	return imageName.indexOf('_ddn') != -1
+		  || imageName.indexOf('_spec') != -1
+		  || imageName.indexOf('_normal') != -1;
+}
+
 function loadTexture(imageName, options) {
 
 	if (!options) {
@@ -116,6 +122,13 @@ function loadTexture(imageName, options) {
 		options['magFilter'] = PicoGL.LINEAR;
 		options['mipmaps'] = true;
 
+		if (isDataTexture(imageName)) {
+			options['internalFormat'] = PicoGL.RGB8;
+			options['format'] = PicoGL.RGB;
+		} else {
+			options['internalFormat'] = PicoGL.SRGB8_ALPHA8;
+			options['format'] = PicoGL.RGBA;
+		}
 	}
 
 	var texture = app.createTexture2D(1, 1, options);
