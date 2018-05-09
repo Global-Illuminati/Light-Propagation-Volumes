@@ -30,7 +30,7 @@ struct SpotLight {
 	vec3  view_direction;
 };
 
-#define NUM_SPOTLIGHTS 12
+#define NUM_SPOTLIGHTS 24
 #if NUM_SPOTLIGHTS
 uniform SpotLight[NUM_SPOTLIGHTS] u_spot_light;
 #endif

@@ -249,7 +249,7 @@ function init() {
 
 	addDirectionalLight();
 	directionalLight = lightSources[0].source;
-	setupSpotLightsSponza(12);
+	setupSpotLightsSponza(24);
 	/*spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));*/
@@ -357,11 +357,15 @@ function setupSpotLightsSponza(_nSpotlights) {
 
 	var spotLightsOnRow = 6;
 
-	var spotPos = vec3.fromValues(-23, 6, -9);
+	var spotPos = vec3.fromValues(-23, 6, -8);
 	var spotDir = vec3.fromValues(0, -1, 0.001);
 	for(var i = 0; i < nSpotLights; i++) {
 		if(i == spotLightsOnRow)
-			spotPos = vec3.fromValues(-23, 6, 9);
+			spotPos = vec3.fromValues(-23, 6, 8);
+		if(i == 2 * spotLightsOnRow)
+			spotPos = vec3.fromValues(-23, 20, 8);
+		if(i == 3 * spotLightsOnRow)
+			spotPos = vec3.fromValues(-23, 20, -8);
 		let random0 = Math.random() * 2;
 		let random1 = Math.random() * 2;
 		let random2 = Math.random() * 2;
