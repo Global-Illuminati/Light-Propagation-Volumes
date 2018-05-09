@@ -249,9 +249,7 @@ function init() {
 
 	addDirectionalLight();
 	directionalLight = lightSources[0].source;
-	var spotPos = vec3.fromValues(-3.2, 2.2, 0.5);
-	var spotDir = vec3.fromValues(-1, 0, 0.3);
-	//addSpotLight(spotPos, spotDir, 20, vec3.fromValues(1.0, 0.6, 20.0));
+	setupSpotLightsSponza(12);
 	/*spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));*/
@@ -352,6 +350,27 @@ function addDirectionalLight(direction, color) {
 
 function addSpotLight(position, direction, coneAngle, color) {
 	lightSources.push({'source' : new SpotLight(position, direction, coneAngle, color) , 'type' : 'SPOT_LIGHT'});
+}
+
+function setupSpotLightsSponza(_nSpotlights) {
+	var nSpotLights = _nSpotlights || 0;
+
+	var spotLightsOnRow = 6;
+
+	var spotPos = vec3.fromValues(-23, 6, -9);
+	var spotDir = vec3.fromValues(0, -1, 0.001);
+	for(var i = 0; i < nSpotLights; i++) {
+		if(i == spotLightsOnRow)
+			spotPos = vec3.fromValues(-23, 6, 9);
+		let random0 = Math.random() * 2;
+		let random1 = Math.random() * 2;
+		let random2 = Math.random() * 2;
+		//console.log(random);
+		let newSpotPos = vec3.create();
+		console.log(newSpotPos);
+		vec3.add(newSpotPos, spotPos, vec3.fromValues(10 * (i % spotLightsOnRow) + random0, 0, random1));
+		addSpotLight(newSpotPos, spotDir, 20, vec3.fromValues(20.0 * random0, 20.0 * random1, 20.0 * random2));
+	}
 }
 
 function createFullscreenVertexArray() {
@@ -664,7 +683,7 @@ function render() {
 		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
         //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
-		//renderTextureToScreen(rsmFramebuffers[1].colorTextures[0]);
+		//renderTextureToScreen(rsmFramebuffers[5].colorTextures[0]);
 
 	}
 	picoTimer.end();

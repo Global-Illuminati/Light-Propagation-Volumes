@@ -35,7 +35,10 @@ void main()
 		float cone_attenuation = 1.0 - smoothstep(inner, outer, 1.0 - dot(normalize(light_to_frag), u_light_direction));
 		float distance_attenuation = 1.0 / max(0.01, lengthSquared(light_to_frag));
 		
-		flux = vec4(u_light_color * diffuse * distance_attenuation * cone_attenuation, 1.0);
+		//lower flux of light to reflect the strength of the directional light (sun)
+		float scale_light = 1.0 / 10.0;
+
+		flux = vec4(u_light_color * diffuse * distance_attenuation * cone_attenuation * scale_light, 1.0);
 	}
 	float light_falloff = saturate(dot(-v_world_space_normal, u_light_direction));
 	flux.rbg *= light_falloff;
