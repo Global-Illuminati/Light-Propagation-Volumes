@@ -8,7 +8,10 @@ function DirectionalLight(direction, color) {
 
 	//
 
-	this.orthoProjectionSize = 100.0;
+	if(sponza)
+		this.orthoProjectionSize = 100.0;
+	else
+		this.orthoProjectionSize = 30.0;
 
 	this.lightViewMatrix = mat4.create();
 	this.lightProjectionMatrix = mat4.create();

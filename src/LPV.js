@@ -70,15 +70,15 @@ LPV.prototype = {
     createFramebuffer: function(_size) {
         const redBuffer = app.createTexture2D(_size * _size, _size, {
             type: PicoGL.FLOAT,
-		    internalFormat: PicoGL.RGBA16F,
+		    internalFormat: PicoGL.RGBA32F,
         });
         const greenBuffer = app.createTexture2D(_size * _size, _size, {
             type: PicoGL.FLOAT,
-		    internalFormat: PicoGL.RGBA16F,
+		    internalFormat: PicoGL.RGBA32F,
         });
         const blueBuffer = app.createTexture2D(_size * _size, _size, {
             type: PicoGL.FLOAT,
-		    internalFormat: PicoGL.RGBA16F,
+		    internalFormat: PicoGL.RGBA32F,
         });
 
         const framebuffer = app.createFramebuffer()

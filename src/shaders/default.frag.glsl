@@ -22,6 +22,7 @@ uniform sampler2D u_shadow_map;
 
 uniform vec3 u_dir_light_color;
 uniform vec3 u_dir_light_view_direction;
+uniform float u_ambient_light_attenuation;
 
 struct SpotLight {
 	vec3  color;
@@ -30,7 +31,7 @@ struct SpotLight {
 	vec3  view_direction;
 };
 
-#define NUM_SPOTLIGHTS 12
+#define NUM_SPOTLIGHTS 0
 #if NUM_SPOTLIGHTS
 uniform SpotLight[NUM_SPOTLIGHTS] u_spot_light;
 #endif
@@ -121,7 +122,7 @@ void main()
 
 	//////////////////////////////////////////////////////////
 	// Ambient
-	vec3 color = u_ambient_color.rgb * diffuse;
+	vec3 color = u_ambient_color.rgb * diffuse * u_ambient_light_attenuation;
 
 	//////////////////////////////////////////////////////////
 	// Directional light
@@ -180,14 +181,17 @@ void main()
 	}
 	#endif
 
+	vec3 final_color = vec3(0.0);	
+
 	// Output tangents
 	if(u_render_direct_light && u_render_indirect_light)
-		o_color = vec4(color, 1.0) + vec4(indirect_light, 1.0) * u_indirect_light_attenuation;
+		final_color = color + indirect_light * u_indirect_light_attenuation;
 	else if (u_render_indirect_light)
-		o_color = vec4(indirect_light, 1.0) * u_indirect_light_attenuation;
+		final_color = indirect_light * u_indirect_light_attenuation;
 	else if (u_render_direct_light)
-		o_color = vec4(color, 1.0);
+		final_color = color;
 	else 
-		o_color = vec4(0.0,0.0,0.0,1.0);
+		final_color = vec3(0.0);
 
+	o_color = vec4(final_color / (final_color + vec3(1.0)), 1.0);
 }

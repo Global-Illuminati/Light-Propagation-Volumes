@@ -12,6 +12,7 @@ var settings = {
 	rotate_light:false,
 
 	indirect_light_attenuation: 3.0,
+	ambient_light: 0.0,
 	render_lpv_debug_view: false,
 	render_direct_light: true,
 	render_indirect_light: false,
@@ -47,7 +48,7 @@ var rsmFramebuffers = [];
 
 var initLPV = false;
 var lpvGridSize = 32;
-var propagationIterations = 12;
+var propagationIterations = 16;
 
 var camera;
 
@@ -60,6 +61,8 @@ var meshes = [];
 var texturesLoaded = 0;
 
 var probeDrawCall;
+
+var sponza = false;
 
 window.addEventListener('DOMContentLoaded', function () {
 
@@ -224,6 +227,7 @@ function init() {
 	gui = new dat.GUI();
 	gui.add(settings, 'target_fps', 0, 120);
 	gui.add(settings, 'environment_brightness', 0.0, 2.0);
+	gui.add(settings, 'ambient_light').name('Ambient light');
 	gui.add(settings, 'rotate_light').name('Rotate light');
 	gui.add(settings, 'indirect_light_attenuation').name('Indirect light attenuation');
 	gui.add(settings, 'render_lpv_debug_view').name('Render LPV cells');
@@ -240,16 +244,27 @@ function init() {
 	//////////////////////////////////////
 	// Camera stuff
 
-	var cameraPos = vec3.fromValues(-15, 3, 0);
-	var cameraRot = quat.fromEuler(quat.create(), 15, -90, 0);
+	if (sponza) {
+		var cameraPos = vec3.fromValues(-15, 3, 0);
+		var cameraRot = quat.fromEuler(quat.create(), 15, -90, 0);
+	} 
+	else {
+		var cameraPos = vec3.fromValues(2.62158, 1.68613, 3.62357 - 5);
+		var cameraRot = quat.fromEuler(quat.create(), 90-101, 180-70.2, 180+180);
+	}
 	camera = new Camera(cameraPos, cameraRot);
 
 	//////////////////////////////////////
 	// Scene setup
-
-	addDirectionalLight();
+	
+	if(sponza)
+		addDirectionalLight(vec3.fromValues(-0.2, -1.0, 0.333), new Float32Array([13.0, 13.0, 13.0]));
+	else {
+		var dirLightAtt = 63;
+		addDirectionalLight(vec3.fromValues(-0.155185, -0.221726, 0.962681), new Float32Array([dirLightAtt * 1.0, dirLightAtt * 0.803, dirLightAtt * 0.433]));
+	}
 	directionalLight = lightSources[0].source;
-	setupSpotLightsSponza(12);
+	//setupSpotLightsSponza(12);
 	/*spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));*/
@@ -304,7 +319,7 @@ function init() {
 		rsmShader = makeShader('RSM', data);
 		simpleShadowMapShader = makeShader('shadowMapping', data);
 		//loadObject('sponza/', 'sponza.obj', 'sponza.mtl');
-		{
+		if(sponza) {
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 0, 0);
 			let t = vec3.fromValues(0, 0, 0);
@@ -312,14 +327,15 @@ function init() {
 			mat4.fromRotationTranslationScale(m, r, t, s);
 			loadObject('sponza_with_teapot/', 'sponza_with_teapot.obj', 'sponza_with_teapot.mtl', m);		
 		}
-		/*{
+		else {
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 0, 0);
-			let t = vec3.fromValues(0, 0, -7);
-			let s = vec3.fromValues(1.8, 1.8, 1.8);
+			let t = vec3.fromValues(0, 0, -5);
+			let s = vec3.fromValues(1.0,1.0,1.0);
 			mat4.fromRotationTranslationScale(m, r, t, s);
 			loadObject('living_room/', 'living_room.obj', 'living_room.mtl', m);		
-		}*/
+		}
+
 		//loadObject('sponza_crytek/', 'sponza.obj', 'sponza.mtl');
 		/*
 		{
@@ -566,7 +582,7 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var probeIndices   = [];
 
 	var gridSize = lpvGridSize;
-	var cellSize = 2.0;
+	var cellSize = 0.2;
 	var origin = vec3.fromValues(0, 0, 0);
 	var step   = vec3.fromValues(cellSize, cellSize, cellSize);
 
@@ -627,8 +643,8 @@ function setupProbeDrawCall(vertexArray, shader) {
 
 function resize() {
 
-	var w = window.innerWidth;
-	var h = window.innerHeight;
+	var w = 1920 * 0.75;
+	var h = 1080 * 0.75;
 
 	app.resize(w, h);
 	camera.resize(w, h);
@@ -684,7 +700,7 @@ function render() {
 		//renderTextureToScreen(LPV.injectionFramebuffer.colorTextures[0]);
         //renderTextureToScreen(LPV.geometryInjectionFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(LPV.propagationFramebuffer.colorTextures[0]);
-		//renderTextureToScreen(rsmFramebuffers[5].colorTextures[0]);
+		//renderTextureToScreen(rsmFramebuffers[0].colorTextures[0]);
 
 	}
 	picoTimer.end();
@@ -818,6 +834,7 @@ function renderScene(framebuffer) {
 			}
 			
 			mesh.drawCall
+			.uniform('u_ambient_light_attenuation', settings.ambient_light)
 			.uniform('u_world_from_local', mesh.modelMatrix)
 			.uniform('u_view_from_world', camera.viewMatrix)
 			.uniform('u_projection_from_view', camera.projectionMatrix)

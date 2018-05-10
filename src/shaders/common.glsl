@@ -35,8 +35,18 @@ vec2 spherical_from_direction(vec3 direction)
 
 float sample_shadow_map(in sampler2D shadow_map, in vec2 uv, in float comparison_depth, in float bias)
 {
-	float shadow_map_depth = texture(shadow_map, uv).r;
-	return step(comparison_depth, shadow_map_depth + bias);
+	vec2 textureSize = vec2(4096.0);
+	vec2 texelSize = vec2(1.0) / textureSize;
+	vec2 txl = texelSize * 0.98;
+
+	float tl = step(comparison_depth, texture(shadow_map, uv + vec2(0.0,   0.0)).x + bias);
+	float tr = step(comparison_depth, texture(shadow_map, uv + vec2(txl.x, 0.0)).x + bias);
+	float bl = step(comparison_depth, texture(shadow_map, uv + vec2(0.0,   txl.y)).x + bias);
+	float br = step(comparison_depth, texture(shadow_map, uv + vec2(txl.x, txl.y)).x + bias);
+	vec2 f = fract(uv * textureSize);
+	float tA = mix(tl, tr, f.x);
+	float tB = mix(bl, br, f.x);
+	return mix(tA, tB, f.y);
 }
 
 float sample_shadow_map_pcf(in sampler2D shadow_map, in vec2 uv, in float comparison_depth, vec2 texel_size, in float bias)
