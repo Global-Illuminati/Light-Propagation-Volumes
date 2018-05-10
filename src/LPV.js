@@ -1,5 +1,5 @@
-function RSMPointCloud(_size, _LPVGridSize) {
-    this.size = _size || 512;
+function LPV(_RSMsize, _LPVGridSize) {
+    this.size = _RSMsize || 512;
     this.framebufferSize = _LPVGridSize || 32;
     this.injectionFramebuffer = this.createFramebuffer(this.framebufferSize);
     this.geometryInjectionFramebuffer = this.createFramebuffer(this.framebufferSize);
@@ -7,8 +7,8 @@ function RSMPointCloud(_size, _LPVGridSize) {
     this.accumulatedBuffer = this.createFramebuffer(this.framebufferSize);
 }
 
-RSMPointCloud.prototype = {
-    constructor: RSMPointCloud,
+LPV.prototype = {
+    constructor: LPV,
 
     //One point per pixel
     createInjectionPointCloud: function() {
@@ -70,15 +70,15 @@ RSMPointCloud.prototype = {
     createFramebuffer: function(_size) {
         const redBuffer = app.createTexture2D(_size * _size, _size, {
             type: PicoGL.FLOAT,
-		    internalFormat: PicoGL.RBGA32F,
+		    internalFormat: PicoGL.RGBA16F,
         });
         const greenBuffer = app.createTexture2D(_size * _size, _size, {
             type: PicoGL.FLOAT,
-		    internalFormat: PicoGL.RBGA32F,
+		    internalFormat: PicoGL.RGBA16F,
         });
         const blueBuffer = app.createTexture2D(_size * _size, _size, {
             type: PicoGL.FLOAT,
-		    internalFormat: PicoGL.RBGA32F,
+		    internalFormat: PicoGL.RGBA16F,
         });
 
         const framebuffer = app.createFramebuffer()

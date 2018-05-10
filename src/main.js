@@ -32,7 +32,7 @@ var defaultShader;
 var rsmShader;
 var simpleShadowMapShader;
 
-var pointCloud;
+var LPV;
 
 var blitTextureDrawCall;
 var environmentDrawCall;
@@ -249,7 +249,7 @@ function init() {
 
 	addDirectionalLight();
 	directionalLight = lightSources[0].source;
-	setupSpotLightsSponza(24);
+	setupSpotLightsSponza(12);
 	/*spotPos = vec3.fromValues(-5, 2.2, 8);
 	spotDir = vec3.fromValues(0, 0, -1);
 	addSpotLight(spotPos, spotDir, 20, vec3.fromValues(20, 0.6, 1.0));*/
@@ -261,7 +261,7 @@ function init() {
 
 	setupSceneUniforms();
 
-	pointCloud = new RSMPointCloud(shadowMapSmallSize, lpvGridSize);
+	LPV = new LPV(shadowMapSmallSize, lpvGridSize);
 
 	var shaderLoader = new ShaderLoader('src/shaders/');
 	shaderLoader.addShaderFile('common.glsl');
@@ -288,9 +288,9 @@ function init() {
 		var lightInjectShader = makeShader('lightInjection', data);
         var geometryInjectShader = makeShader('geometryInjection', data);
 		var lightPropagationShader = makeShader('lightPropagation', data);
-		pointCloud.createInjectionDrawCall(lightInjectShader);
-        pointCloud.createGeometryInjectDrawCall(geometryInjectShader);
-		pointCloud.createPropagationDrawCall(lightPropagationShader);
+		LPV.createInjectionDrawCall(lightInjectShader);
+        LPV.createGeometryInjectDrawCall(geometryInjectShader);
+		LPV.createPropagationDrawCall(lightPropagationShader);
 
 		var environmentShader = makeShader('environment', data);
 		environmentDrawCall = app.createDrawCall(environmentShader, fullscreenVertexArray)
@@ -654,25 +654,22 @@ function render() {
 		renderShadowMap();
 		// Only refresh LPV when shadow map has been updated
 		if (initLPV && settings.render_indirect_light) {
-			if(pointCloud.accumulatedBuffer && pointCloud.injectionFramebuffer) {
-				pointCloud.clearInjectionBuffer();
-				pointCloud.clearAccumulatedBuffer();
+			if(LPV.accumulatedBuffer && LPV.injectionFramebuffer) {
+				LPV.clearInjectionBuffer();
+				LPV.clearAccumulatedBuffer();
 			}
-
-			console.time('LPV');
 
 			for(var i = 0; i < rsmFramebuffers.length; i++) {
-				pointCloud.lightInjection(rsmFramebuffers[i]);
+				LPV.lightInjection(rsmFramebuffers[i]);
 			}
 
-			pointCloud.geometryInjection(rsmFramebuffers[0], directionalLight);
-			pointCloud.lightPropagation(propagationIterations);
+			LPV.geometryInjection(rsmFramebuffers[0], directionalLight);
+			LPV.lightPropagation(propagationIterations);
 			initLPV = false;
-			console.timeEnd('LPV');
 		}
 
-		if (pointCloud.accumulatedBuffer)
-			renderScene(pointCloud.accumulatedBuffer);
+		if (LPV.accumulatedBuffer)
+			renderScene(LPV.accumulatedBuffer);
 
 		var viewProjection = mat4.mul(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
 
@@ -684,9 +681,9 @@ function render() {
 		renderEnvironment(inverseViewProjection);
 
 		// Call this to get a debug render of the passed in texture
-		//renderTextureToScreen(pointCloud.injectionFramebuffer.colorTextures[0]);
-        //renderTextureToScreen(pointCloud.geometryInjectionFramebuffer.colorTextures[0]);
-		//renderTextureToScreen(pointCloud.propagationFramebuffer.colorTextures[0]);
+		//renderTextureToScreen(LPV.injectionFramebuffer.colorTextures[0]);
+        //renderTextureToScreen(LPV.geometryInjectionFramebuffer.colorTextures[0]);
+		//renderTextureToScreen(LPV.propagationFramebuffer.colorTextures[0]);
 		//renderTextureToScreen(rsmFramebuffers[5].colorTextures[0]);
 
 	}
@@ -827,7 +824,7 @@ function renderScene(framebuffer) {
 			.uniform('u_dir_light_color', directionalLight.color)
 			.uniform('u_dir_light_view_direction', dirLightViewDirection)
 			.uniform('u_light_projection_from_world', lightViewProjection)
-			.uniform('u_lpv_grid_size', pointCloud.framebufferSize)
+			.uniform('u_lpv_grid_size', LPV.framebufferSize)
 			.uniform('u_render_direct_light', settings.render_direct_light)
 			.uniform('u_render_indirect_light', settings.render_indirect_light)
 			.uniform('u_indirect_light_attenuation', settings.indirect_light_attenuation)
@@ -853,12 +850,12 @@ function renderLpvCells(viewProjection) {
 		.noBlend();
 
 		// Replace with the propagated for a view of it
-		var lpv = pointCloud.injectionFramebuffer;
+		var lpvbuffers = LPV.accumulatedBuffer;
 
 		probeDrawCall
-		.texture('u_lpv_red', lpv.colorTextures[0])
-		.texture('u_lpv_green', lpv.colorTextures[1])
-		.texture('u_lpv_blue', lpv.colorTextures[2])
+		.texture('u_lpv_red', lpvbuffers.colorTextures[0])
+		.texture('u_lpv_green', lpvbuffers.colorTextures[1])
+		.texture('u_lpv_blue', lpvbuffers.colorTextures[2])
 		.uniform('u_lpv_size', lpvGridSize)
 		.uniform('u_projection_from_world', viewProjection)
 		.draw();
