@@ -62,7 +62,7 @@ var texturesLoaded = 0;
 
 var probeDrawCall;
 
-var sponza = false;
+var sponza = true;
 
 window.addEventListener('DOMContentLoaded', function () {
 
@@ -582,7 +582,7 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var probeIndices   = [];
 
 	var gridSize = lpvGridSize;
-	var cellSize = 0.2;
+	var cellSize = 4.0;
 	var origin = vec3.fromValues(0, 0, 0);
 	var step   = vec3.fromValues(cellSize, cellSize, cellSize);
 

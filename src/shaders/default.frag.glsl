@@ -49,33 +49,16 @@ uniform sampler2D u_blue_indirect_light;
 
 layout(location = 0) out vec4 o_color;
 
-vec4 sample_grid_trilinear(in sampler2D t, vec3 texCoord) {
-	ivec3 x0y0z0 = ivec3(floor(texCoord.x), floor(texCoord.y), floor(texCoord.z));
-	ivec2 fetchCoords = ivec2(x0y0z0.x + (x0y0z0.z * u_lpv_grid_size), x0y0z0.y);
+vec4 sample_grid_trilinear(in sampler2D t, vec3 grid_cell) {
+	float f_grid_size = float(u_lpv_grid_size);
+	float zFloor = floor(grid_cell.z);
 
-	vec4 bl1 = texelFetch(t, fetchCoords, 0);
-	vec4 br1 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
+	vec2 tex_coord = vec2(grid_cell.x / (f_grid_size * f_grid_size) + zFloor / f_grid_size , grid_cell.y / f_grid_size);
 
-	vec4 tl1 = texelFetch(t, fetchCoords + ivec2(0,1), 0);
-	vec4 tr1 = texelFetch(t, fetchCoords + ivec2(1,1), 0);
+	vec4 t1 = texture(t, tex_coord);
+	vec4 t2 = texture(t, vec2(tex_coord.x + (1.0 / f_grid_size), tex_coord.y));
 
-	vec4 b1 = mix(bl1, br1, texCoord.x - float(x0y0z0.x));
-	vec4 t1 = mix(tl1, tr1, texCoord.x - float(x0y0z0.x));
-	vec4 r1 = mix(b1, t1, texCoord.y - float(x0y0z0.y));
-
-	fetchCoords = ivec2(x0y0z0.x + ((x0y0z0.z + 1) * u_lpv_grid_size), x0y0z0.y);
-
-	vec4 bl2 = texelFetch(t, fetchCoords, 0);
-	vec4 br2 = texelFetch(t, fetchCoords + ivec2(1,0), 0);
-
-	vec4 tl2 = texelFetch(t, fetchCoords + ivec2(0,1), 0);
-	vec4 tr2 = texelFetch(t, fetchCoords + ivec2(1,1), 0);
-
-	vec4 b2 = mix(bl2, br2, texCoord.x - float(x0y0z0.x));
-	vec4 t2 = mix(tl2, tr2, texCoord.x - float(x0y0z0.x));
-	vec4 r2 = mix(b2, t2, texCoord.y - float(x0y0z0.y));
-
-	return mix(r1, r2, texCoord.z - float(x0y0z0.z));
+	return mix(t1,t2, grid_cell.z - zFloor);
 }
 
 vec3 get_lpv_intensity()
@@ -181,17 +164,13 @@ void main()
 	}
 	#endif
 
-	vec3 final_color = vec3(0.0);	
-
 	// Output tangents
 	if(u_render_direct_light && u_render_indirect_light)
-		final_color = color + indirect_light * u_indirect_light_attenuation;
+		color = color + indirect_light * u_indirect_light_attenuation;
 	else if (u_render_indirect_light)
-		final_color = indirect_light * u_indirect_light_attenuation;
-	else if (u_render_direct_light)
-		final_color = color;
-	else 
-		final_color = vec3(0.0);
+		color = indirect_light * u_indirect_light_attenuation;
+	else if(!u_render_direct_light)
+		color = vec3(0.0);
 
-	o_color = vec4(final_color / (final_color + vec3(1.0)), 1.0);
+	o_color = vec4(color / (color + vec3(1.0)), 1.0);
 }
