@@ -267,7 +267,7 @@ function init() {
 		var cameraRot = quat.fromEuler(quat.create(), 15, -90, 0);
 	} 
 	else {
-		var cameraPos = vec3.fromValues(2.62158, 1.68613 + offsetY , 3.62357 + offsetZ);
+		var cameraPos = vec3.fromValues(2.62158 + offsetX, 1.68613 + offsetY , 3.62357 + offsetZ);
 		var cameraRot = quat.fromEuler(quat.create(), 90-101, 180-70.2, 180+180);
 	}
 	camera = new Camera(cameraPos, cameraRot);
@@ -348,7 +348,7 @@ function init() {
 		else {
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 0, 0);
-			let t = vec3.fromValues(0, offsetY, offsetZ);
+			let t = vec3.fromValues(offsetX, offsetY, offsetZ);
 			let s = vec3.fromValues(1.0,1.0,1.0);
 			mat4.fromRotationTranslationScale(m, r, t, s);
 			loadObject('living_room/', 'living_room.obj', 'living_room.mtl', m);		
