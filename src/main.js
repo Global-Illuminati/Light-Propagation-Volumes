@@ -46,9 +46,20 @@ var shadowMapFramebuffer;
 var shadowMapSmallSize = 512;
 var rsmFramebuffers = [];
 
+var sponza = false;
+
 var initLPV = false;
-var lpvGridSize = 32;
-var propagationIterations = 16;
+
+var lpvGridSize;
+var propagationIterations;
+
+if (sponza) {
+    lpvGridSize = 32;
+    propagationIterations = 16;
+} else {
+    lpvGridSize = 8;
+    propagationIterations = 16;
+}
 
 var camera;
 
@@ -62,7 +73,7 @@ var texturesLoaded = 0;
 
 var probeDrawCall;
 
-var sponza = true;
+
 
 window.addEventListener('DOMContentLoaded', function () {
 
@@ -582,7 +593,14 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var probeIndices   = [];
 
 	var gridSize = lpvGridSize;
-	var cellSize = 4.0;
+	var cellSize;
+
+	if (sponza) {
+		cellSize = 4.0;
+	} else {
+		cellSize = 2.0;
+	}
+
 	var origin = vec3.fromValues(0, 0, 0);
 	var step   = vec3.fromValues(cellSize, cellSize, cellSize);
 
