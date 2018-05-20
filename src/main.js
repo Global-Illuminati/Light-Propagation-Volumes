@@ -11,7 +11,7 @@ var settings = {
 
 	rotate_light:false,
 
-	indirect_light_attenuation: 3.0,
+	indirect_light_attenuation: 1.0,
 	ambient_light: 0.0,
 	render_lpv_debug_view: false,
 	render_direct_light: true,
