@@ -53,12 +53,19 @@ var initLPV = false;
 var lpvGridSize;
 var propagationIterations;
 
+var offsetX;
+var offsetY;
+var offsetZ;
+
 if (sponza) {
     lpvGridSize = 32;
     propagationIterations = 16;
 } else {
-    lpvGridSize = 8;
+    lpvGridSize = 16;
     propagationIterations = 16;
+    offsetX = 0;
+    offsetY = 4;
+    offsetZ = -5;
 }
 
 var camera;
@@ -260,7 +267,7 @@ function init() {
 		var cameraRot = quat.fromEuler(quat.create(), 15, -90, 0);
 	} 
 	else {
-		var cameraPos = vec3.fromValues(2.62158, 1.68613, 3.62357 - 5);
+		var cameraPos = vec3.fromValues(2.62158, 1.68613 + offsetY , 3.62357 + offsetZ);
 		var cameraRot = quat.fromEuler(quat.create(), 90-101, 180-70.2, 180+180);
 	}
 	camera = new Camera(cameraPos, cameraRot);
@@ -341,7 +348,7 @@ function init() {
 		else {
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 0, 0);
-			let t = vec3.fromValues(0, 0, -5);
+			let t = vec3.fromValues(0, offsetY, offsetZ);
 			let s = vec3.fromValues(1.0,1.0,1.0);
 			mat4.fromRotationTranslationScale(m, r, t, s);
 			loadObject('living_room/', 'living_room.obj', 'living_room.mtl', m);		
@@ -598,7 +605,7 @@ function setupProbeDrawCall(vertexArray, shader) {
 	if (sponza) {
 		cellSize = 4.0;
 	} else {
-		cellSize = 2.0;
+		cellSize = 0.8;
 	}
 
 	var origin = vec3.fromValues(0, 0, 0);
