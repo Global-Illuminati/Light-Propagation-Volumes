@@ -61,10 +61,10 @@ if (sponza) {
     lpvGridSize = 32;
     propagationIterations = 16;
 } else {
-    lpvGridSize = 16;
-    propagationIterations = 16;
+    lpvGridSize = 32;
+    propagationIterations = 32;
     offsetX = 0;
-    offsetY = 4;
+    offsetY = -4;
     offsetZ = -5;
 }
 
@@ -605,7 +605,7 @@ function setupProbeDrawCall(vertexArray, shader) {
 	if (sponza) {
 		cellSize = 4.0;
 	} else {
-		cellSize = 0.8;
+		cellSize = 0.4;
 	}
 
 	var origin = vec3.fromValues(0, 0, 0);

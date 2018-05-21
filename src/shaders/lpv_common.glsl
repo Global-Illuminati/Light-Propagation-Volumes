@@ -8,7 +8,7 @@
 #define SH_cosLobe_C0 0.886226925f // sqrt(pi)/2
 #define SH_cosLobe_C1 1.02332671f // sqrt(pi/3)
 
-#define CELLSIZE 4.0
+#define CELLSIZE 0.8
 
 vec4 evalCosineLobeToDir(vec3 dir)
 {

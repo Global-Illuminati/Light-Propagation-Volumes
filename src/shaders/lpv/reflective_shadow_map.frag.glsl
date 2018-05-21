@@ -40,8 +40,8 @@ void main()
 
 		flux = vec4(u_light_color * diffuse * distance_attenuation * cone_attenuation * scale_light, 1.0);
 	}
-	float light_falloff = saturate(dot(-v_world_space_normal, u_light_direction));
-	flux.rbg *= light_falloff;
+	//float light_falloff = saturate(dot(-v_world_space_normal, u_light_direction));
+	//flux.rbg *= light_falloff;
 
 
 	o_color_map = flux;
