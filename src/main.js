@@ -46,7 +46,7 @@ var shadowMapFramebuffer;
 var shadowMapSmallSize = 512;
 var rsmFramebuffers = [];
 
-var sponza = false;
+var sponza = true;
 
 var initLPV = false;
 
@@ -59,13 +59,16 @@ var offsetZ;
 
 if (sponza) {
     lpvGridSize = 32;
-    propagationIterations = 16;
+	propagationIterations = 64;
+	offsetX = 0;
+    offsetY = 1.5;
+    offsetZ = 0;
 } else {
     lpvGridSize = 32;
-    propagationIterations = 32;
+    propagationIterations = 64;
     offsetX = 0;
-    offsetY = -4;
-    offsetZ = -5;
+    offsetY = -1;
+    offsetZ = -4.5;
 }
 
 var camera;
@@ -263,7 +266,7 @@ function init() {
 	// Camera stuff
 
 	if (sponza) {
-		var cameraPos = vec3.fromValues(-15, 3, 0);
+		var cameraPos = vec3.fromValues(-15 + offsetX, 3 + offsetY, 0 + offsetZ);
 		var cameraRot = quat.fromEuler(quat.create(), 15, -90, 0);
 	} 
 	else {
@@ -340,7 +343,7 @@ function init() {
 		if(sponza) {
 			let m = mat4.create();
 			let r = quat.fromEuler(quat.create(), 0, 0, 0);
-			let t = vec3.fromValues(0, 0, 0);
+			let t = vec3.fromValues(offsetX, offsetY, offsetZ);
 			let s = vec3.fromValues(1, 1, 1);
 			mat4.fromRotationTranslationScale(m, r, t, s);
 			loadObject('sponza_with_teapot/', 'sponza_with_teapot.obj', 'sponza_with_teapot.mtl', m);		
@@ -603,9 +606,9 @@ function setupProbeDrawCall(vertexArray, shader) {
 	var cellSize;
 
 	if (sponza) {
-		cellSize = 4.0;
+		cellSize = 2.25;
 	} else {
-		cellSize = 0.4;
+		cellSize = 0.325;
 	}
 
 	var origin = vec3.fromValues(0, 0, 0);
