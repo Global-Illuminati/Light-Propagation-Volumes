@@ -671,8 +671,8 @@ function setupProbeDrawCall(vertexArray, shader) {
 
 function resize() {
 
-	var w = 1920 * 0.75;
-	var h = 1080 * 0.75;
+	var w = innerWidth;
+	var h = innerHeight;
 
 	app.resize(w, h);
 	camera.resize(w, h);
